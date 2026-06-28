@@ -40,7 +40,7 @@ export const StudioScreen = ({ onGenerate }) => {
     setIsGenerating(true);
     setCurationProgressData({
       editorial: null,
-      imagePath: null,
+      imagePaths: null,
       videoPath: null,
       voicePath: null
     });
@@ -67,7 +67,11 @@ export const StudioScreen = ({ onGenerate }) => {
         setProgressLog("氛围动态视频烘焙中...");
         setCurationProgressData(prev => ({
           ...prev,
-          imagePath: "/assets/minimalist-vase/hero.png"
+          imagePaths: [
+            "/assets/minimalist-vase/hero_1.png",
+            "/assets/minimalist-vase/hero_2.png",
+            "/assets/minimalist-vase/hero_3.png"
+          ]
         }));
       }, 1000);
 
@@ -243,12 +247,22 @@ export const StudioScreen = ({ onGenerate }) => {
                   </div>
                 )}
 
-                {/* 2. Image Preview */}
-                {curationProgressData.imagePath && (
+                {/* 2. Image Preview (Supports 3 Storyboards) */}
+                {(curationProgressData.imagePaths || curationProgressData.imagePath) && (
                   <div className="animate-fade-in space-y-1 pb-3 border-b border-sand-200">
-                    <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">02 · 视觉大片</span>
-                    <div className="w-full h-[120px] rounded overflow-hidden border border-sand-300">
-                      <img src={curationProgressData.imagePath} alt="Emerging Image" className="w-full h-full object-cover" />
+                    <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">02 · 意境大片分镜 (3张)</span>
+                    <div className="grid grid-cols-3 gap-2">
+                      {curationProgressData.imagePaths ? (
+                        curationProgressData.imagePaths.map((path, idx) => (
+                          <div key={idx} className="w-full h-[65px] rounded overflow-hidden border border-sand-300">
+                            <img src={path} alt={`Storyboard ${idx+1}`} className="w-full h-full object-cover animate-fade-in" />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-3 w-full h-[120px] rounded overflow-hidden border border-sand-300">
+                          <img src={curationProgressData.imagePath} alt="Emerging Image" className="w-full h-full object-cover" />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

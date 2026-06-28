@@ -92,23 +92,31 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     const imgPrompt = `${productVisualDetails || description}, elegant minimalism, wabi-sabi background, warm evening sunlight, shot on 35mm film, award-winning photography style`;
     const imgOutDir = targetDir;
     
-    await execAsync(`bl image generate --prompt "${imgPrompt}" --size 4:3 --watermark false --out-dir "${imgOutDir}" --out-prefix hero`);
+    await execAsync(`bl image generate --prompt "${imgPrompt}" --size 4:3 --n 3 --watermark false --out-dir "${imgOutDir}" --out-prefix hero`);
     
-    // 重命名下载的图片为 hero.png
+    // 重命名下载的三张图片为 hero_1.png, hero_2.png, hero_3.png
     try {
-      const files = fs.readdirSync(targetDir);
-      const heroFile = files.find(f => f.startsWith("hero_") || f.startsWith("image_"));
-      if (heroFile) fs.renameSync(path.join(targetDir, heroFile), path.join(targetDir, "hero.png"));
+      const files = fs.readdirSync(targetDir).filter(f => f.startsWith("hero_") || f.startsWith("image_"));
+      files.sort();
+      files.forEach((file, index) => {
+        fs.renameSync(path.join(targetDir, file), path.join(targetDir, `hero_${index + 1}.png`));
+      });
     } catch (err) {
-      console.error("Rename image failed", err);
+      console.error("Rename images failed", err);
     }
-    sendProgress(curationId, 2, "processing", "意境渲染图绘制完成！", { imagePath: `http://localhost:3001/assets/generated/${curationId}/hero.png` });
+    const generatedImagePaths = [
+      `http://localhost:3001/assets/generated/${curationId}/hero_1.png`,
+      `http://localhost:3001/assets/generated/${curationId}/hero_2.png`,
+      `http://localhost:3001/assets/generated/${curationId}/hero_3.png`
+    ];
+    sendProgress(curationId, 2, "processing", "意境渲染图绘制完成！", { imagePaths: generatedImagePaths });
 
     // Step 3: 动态氛围视频生成 (HappyHorse 1.1)
     sendProgress(curationId, 3, "processing", "HappyHorse 1.1 正在生成 5 秒动态呼吸运镜视频...");
     const videoPrompt = `The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic`;
     
-    await execAsync(`bl video generate --image "${path.join(targetDir, "hero.png")}" --prompt "${videoPrompt}" --resolution 720P --duration 5 --watermark false --download "${path.join(targetDir, "ambient.mp4")}"`);
+    // 传入第一张生图作为视频的起始分镜参考帧
+    await execAsync(`bl video generate --image "${path.join(targetDir, "hero_1.png")}" --prompt "${videoPrompt}" --resolution 720P --duration 5 --watermark false --download "${path.join(targetDir, "ambient.mp4")}"`);
     sendProgress(curationId, 3, "processing", "氛围动态视频烘焙完成！", { videoPath: `http://localhost:3001/assets/generated/${curationId}/ambient.mp4` });
 
     // Step 4: 旁白配音合成 (CosyVoice)
@@ -123,7 +131,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       subtitle: "自适应智能策展单品",
       theme: "quiet-minimal",
       editorial: curationText,
-      imagePath: `http://localhost:3001/assets/generated/${curationId}/hero.png`,
+      imagePaths: generatedImagePaths,
       videoPath: `http://localhost:3001/assets/generated/${curationId}/ambient.mp4`,
       voicePath: `http://localhost:3001/assets/generated/${curationId}/narration.mp3`,
       features: [

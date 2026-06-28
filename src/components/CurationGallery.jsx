@@ -1,15 +1,26 @@
-import React from "react";
+import React, { useState } from "react";
 import { ThreeDCard } from "./ThreeDCard";
 import { TypeWriter } from "./TypeWriter";
 import { AudioNarration } from "./AudioNarration";
+import { ArrowLeft } from "lucide-react";
 
 export const CurationGallery = ({ data, onReset }) => {
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
+
   return (
     <div className="w-full min-h-screen py-16 bg-sand-200">
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-5xl mx-auto px-6 relative">
         
+        {/* Floating Return Button */}
+        <button
+          onClick={onReset}
+          className="absolute -top-4 left-6 flex items-center gap-1.5 text-xs text-gray-500 hover:text-charcoal transition-colors cursor-pointer z-20 font-sans"
+        >
+          <ArrowLeft size={14} /> 返回策展工坊
+        </button>
+
         {/* Header */}
-        <div className="text-center border-b border-sand-400 pb-8 mb-12 animate-fade-in">
+        <div className="text-center border-b border-sand-400 pb-8 mb-12 animate-fade-in pt-4">
           <span className="text-[10px] font-sans tracking-[0.3em] text-gray-500 uppercase">The Art of Curation</span>
           <h1 className="font-serif text-4xl md:text-5xl font-light text-charcoal mt-3 mb-1">
             {data.productName}
@@ -20,18 +31,35 @@ export const CurationGallery = ({ data, onReset }) => {
         {/* Bento Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[220px]">
           
-          {/* Box 1: Hero Image (3D Card) */}
+          {/* Box 1: Hero Image (3D Card Carousel) */}
           <div className="md:col-span-2 md:row-span-2 rounded-lg border border-sand-300 bg-white overflow-hidden shadow-xs hover:shadow-md transition-shadow relative">
             <ThreeDCard>
               <div className="w-full h-full relative flex items-center justify-center overflow-hidden">
                 <img
-                  src={data.imagePath}
+                  src={data.imagePaths ? data.imagePaths[activeImageIdx] : data.imagePath}
                   alt={data.productName}
-                  className="w-full h-full object-cover select-none pointer-events-none"
+                  className="w-full h-full object-cover select-none pointer-events-none absolute inset-0 transition-all duration-500"
                 />
-                <div className="absolute top-4 right-4 bg-white/80 backdrop-blur-xs border border-sand-300 px-3 py-1 text-[9px] uppercase tracking-wider text-gray-600 rounded">
-                  Qwen-Image 2.0 意境渲染
+                <div className="absolute top-4 right-4 bg-white/80 backdrop-blur-xs border border-sand-300 px-3 py-1 text-[9px] uppercase tracking-wider text-gray-600 rounded z-10">
+                  分镜 {activeImageIdx + 1} / 3 · Qwen-Image 2.0
                 </div>
+                {/* Switcher Tabs */}
+                {data.imagePaths && data.imagePaths.length > 1 && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full z-10">
+                    {data.imagePaths.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImageIdx(idx);
+                        }}
+                        className={`text-[8px] font-sans font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${activeImageIdx === idx ? 'bg-white text-charcoal' : 'text-gray-300 hover:text-white'}`}
+                      >
+                        分镜 {idx + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </ThreeDCard>
           </div>

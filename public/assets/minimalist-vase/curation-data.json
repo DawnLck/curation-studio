@@ -6,9 +6,13 @@
     "headline": "静默，是物体的呼吸。",
     "body": "让产品不再是单纯的货架，而是一个空间的注脚。这款手工陶瓷花瓶以泥土的原始颗粒感与无序的物理波纹，静默地诉说着慢时光的故事。在黄昏折射的余晖中，它安放了空间的温度。"
   },
-  "voicePath": "/assets/minimalist-vase/narration.mp3",
-  "videoPath": "/assets/minimalist-vase/ambient.mp4",
-  "imagePath": "/assets/minimalist-vase/hero.png",
+  "voicePath": "http://localhost:3001/assets/minimalist-vase/narration.mp3",
+  "videoPath": "http://localhost:3001/assets/minimalist-vase/ambient.mp4",
+  "imagePaths": [
+    "http://localhost:3001/assets/minimalist-vase/hero_1.png",
+    "http://localhost:3001/assets/minimalist-vase/hero_2.png",
+    "http://localhost:3001/assets/minimalist-vase/hero_3.png"
+  ],
   "features": [
     { "title": "手工拉坯", "desc": "粗砂陶泥，留存了手作匠人的天然力道与质感" },
     { "title": "光影雕刻", "desc": "瓶身磨砂亚光表层，完美承接日光折射的光影微澜" }
