@@ -206,7 +206,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     const sub2Url = `http://localhost:3001/assets/generated/${curationId}/sub_2.png`;
     const ensembleUrl = `http://localhost:3001/assets/generated/${curationId}/ensemble.png`;
 
-    // 声明分镜渲染任务队列
+    // 声明分镜渲染任务队列 (混合并发：仅 task 1 使用免费 Pro 模型，其余 5 张使用常规 paid 高并发模型)
     const tasks = [
       async () => {
         sendProgress(curationId, 2, "processing", "正在绘制主商品分镜一 (全景意境图)...");
@@ -216,19 +216,19 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       },
       async () => {
         sendProgress(curationId, 2, "processing", "正在绘制主商品分镜二 (细节特写图)...");
-        await runWithRetry(["image", "generate", "--prompt", imgPrompt2, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_2"]);
+        await runWithRetry(["image", "generate", "--prompt", imgPrompt2, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_2"]);
         renameFile("hero_2", "hero_2.png");
         sendProgress(curationId, 2, "processing", "主商品分镜二已就绪", { imagePaths: [hero1Url, hero2Url] });
       },
       async () => {
         sendProgress(curationId, 2, "processing", "正在绘制主商品分镜三 (场景展示图)...");
-        await runWithRetry(["image", "generate", "--prompt", imgPrompt3, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_3"]);
+        await runWithRetry(["image", "generate", "--prompt", imgPrompt3, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_3"]);
         renameFile("hero_3", "hero_3.png");
         sendProgress(curationId, 2, "processing", "主商品分镜三已就绪", { imagePaths: [hero1Url, hero2Url, hero3Url] });
       },
       async () => {
         sendProgress(curationId, 2, "processing", `正在绘制搭配单品一 [${subProduct1Name}] 特写图...`);
-        await runWithRetry(["image", "generate", "--prompt", imgPromptSub1, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_1"]);
+        await runWithRetry(["image", "generate", "--prompt", imgPromptSub1, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_1"]);
         renameFile("sub_1", "sub_1.png");
         sendProgress(curationId, 2, "processing", `搭配小件一 [${subProduct1Name}] 已就绪`, {
           imagePaths: [hero1Url, hero2Url, hero3Url],
@@ -237,7 +237,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       },
       async () => {
         sendProgress(curationId, 2, "processing", `正在绘制搭配单品二 [${subProduct2Name}] 特写图...`);
-        await runWithRetry(["image", "generate", "--prompt", imgPromptSub2, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_2"]);
+        await runWithRetry(["image", "generate", "--prompt", imgPromptSub2, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_2"]);
         renameFile("sub_2", "sub_2.png");
         sendProgress(curationId, 2, "processing", `搭配小件二 [${subProduct2Name}] 已就绪`, {
           imagePaths: [hero1Url, hero2Url, hero3Url],
@@ -247,7 +247,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       },
       async () => {
         sendProgress(curationId, 2, "processing", "正在绘制全景搭配合影 Lookbook...");
-        await runWithRetry(["image", "generate", "--prompt", imgPromptEnsemble, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "ensemble"]);
+        await runWithRetry(["image", "generate", "--prompt", imgPromptEnsemble, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "ensemble"]);
         renameFile("ensemble", "ensemble.png");
         sendProgress(curationId, 2, "processing", "全景合照大片已就绪", {
           imagePaths: [hero1Url, hero2Url, hero3Url],
@@ -269,7 +269,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       } catch (err) {
         const errMsg = err.message || "";
         const errStderr = err.stderr || "";
-        const isRateLimit = errMsg.includes("429") || errMsg.includes("Throttling") || errStderr.includes("429") || errStderr.includes("RateQuota");
+        const isRateLimit = errMsg.includes("429") || errMsg.includes("Throttling") || errStderr.includes("429") || errStderr.includes("RateQuota") || errMsg.includes("rate limit exceeded");
         
         if (isRateLimit && batchSize > 1) {
           console.warn("[Concurrency Limiter] 并发请求触发 429 节流。动态将并发阈值限制调整为 1 (串行)，并重新执行本批任务...");
@@ -320,35 +320,77 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     ]);
     sendProgress(curationId, 4, "processing", "声音旁白录音合成完成！", { voicePath: `http://localhost:3001/assets/generated/${curationId}/narration.mp3` });
 
-    // Step 5: 写入静态配置文件
+    // Step 5: 写入静态配置文件 (初始化历史版本追踪数据模型)
     sendProgress(curationId, 5, "processing", "正在完成数据拼装与排版注入...");
+    
     const finalJSON = {
       productName: description.substring(0, 10) || "主商品首发",
       subtitle: "自适应智能策展单品",
       theme: "quiet-minimal",
-      editorial: curationText,
-      imagePaths: generatedImagePaths,
-      videoPath: `http://localhost:3001/assets/generated/${curationId}/ambient.mp4`,
-      voicePath: `http://localhost:3001/assets/generated/${curationId}/narration.mp3`,
-      imagePrompts: [imgPrompt1, imgPrompt2, imgPrompt3],
-      videoPrompt: videoPrompt,
-      subProducts: [
-        {
-          name: subProduct1Name,
-          desc: subProduct1Desc,
-          imagePath: generatedSub1Path,
-          prompt: imgPromptSub1
-        },
-        {
-          name: subProduct2Name,
-          desc: subProduct2Desc,
-          imagePath: generatedSub2Path,
-          prompt: imgPromptSub2
-        }
-      ],
-      ensemble: {
-        imagePath: generatedEnsemblePath,
-        prompt: imgPromptEnsemble
+      activeVersions: {
+        editorial: 0,
+        hero_1: 0,
+        hero_2: 0,
+        hero_3: 0,
+        subProduct1: 0,
+        subProduct2: 0,
+        ensemble: 0,
+        video: 0
+      },
+      history: {
+        editorial: [
+          {
+            headline: curationText.headline,
+            body: curationText.body,
+            voicePath: `http://localhost:3001/assets/generated/${curationId}/narration.mp3`
+          }
+        ],
+        hero_1: [
+          {
+            imagePath: hero1Url,
+            prompt: imgPrompt1
+          }
+        ],
+        hero_2: [
+          {
+            imagePath: hero2Url,
+            prompt: imgPrompt2
+          }
+        ],
+        hero_3: [
+          {
+            imagePath: hero3Url,
+            prompt: imgPrompt3
+          }
+        ],
+        subProduct1: [
+          {
+            name: subProduct1Name,
+            desc: subProduct1Desc,
+            imagePath: sub1Url,
+            prompt: imgPromptSub1
+          }
+        ],
+        subProduct2: [
+          {
+            name: subProduct2Name,
+            desc: subProduct2Desc,
+            imagePath: sub2Url,
+            prompt: imgPromptSub2
+          }
+        ],
+        ensemble: [
+          {
+            imagePath: ensembleUrl,
+            prompt: imgPromptEnsemble
+          }
+        ],
+        video: [
+          {
+            videoPath: `http://localhost:3001/assets/generated/${curationId}/ambient.mp4`,
+            prompt: videoPrompt
+          }
+        ]
       },
       features: [
         { title: "套系搭配", desc: `${subProduct1Name} 与 ${subProduct2Name} 空间连结` },
@@ -361,6 +403,131 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
   } catch (err) {
     console.error(err);
     sendProgress(curationId, 6, "failed", `策展失败: ${err.message}`);
+  }
+});
+
+// 新增资产局部重新生成接口，支持快照式多版本保留与对比
+app.post("/api/curate/regenerate-asset", async (req, res) => {
+  const { curationId, assetType } = req.body;
+  if (!curationId || !assetType) {
+    return res.status(400).json({ error: "Missing curationId or assetType" });
+  }
+
+  const targetDir = path.join(__dirname, "public", "assets", "generated", curationId);
+  const jsonPath = path.join(targetDir, "curation-data.json");
+  if (!fs.existsSync(jsonPath)) {
+    return res.status(404).json({ error: "Curation folder not found" });
+  }
+
+  try {
+    const data = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+    const timestamp = Date.now();
+
+    if (assetType === "editorial") {
+      // 重新生成文案
+      const desc = data.productName;
+      // 寻找当前活跃的副单品信息
+      const sub1 = data.history.subProduct1[data.activeVersions.subProduct1];
+      const sub2 = data.history.subProduct2[data.activeVersions.subProduct2];
+
+      const textPrompt = `写一篇关于商品展示套系“主商品为：${desc}，搭配商品包括：${sub1.name} 与 ${sub2.name}”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
+      const textResult = await runWithRetry([
+        "text", "chat",
+        "--message", textPrompt,
+        "--output", "text"
+      ]);
+      const rawStdout = textResult.stdout.trim();
+      const cleanedJsonStr = rawStdout.replace(/```json|```/g, "").trim();
+      const rawJson = JSON.parse(cleanedJsonStr);
+      
+      const headline = rawJson.headline || rawJson.Headline || rawJson.title || "静默新品";
+      const body = rawJson.body || rawJson.Body || rawJson.content || "";
+
+      // 重新合成旁白语音
+      const voiceFile = `narration_${timestamp}.mp3`;
+      await runWithRetry([
+        "speech", "synthesize",
+        "--text", body,
+        "--voice", "longwan_v3",
+        "--language", "zh",
+        "--out", path.join(targetDir, voiceFile)
+      ]);
+
+      data.history.editorial.push({
+        headline,
+        body,
+        voicePath: `http://localhost:3001/assets/generated/${curationId}/${voiceFile}`
+      });
+      data.activeVersions.editorial = data.history.editorial.length - 1;
+
+    } else if (["hero_1", "hero_2", "hero_3", "subProduct1", "subProduct2", "ensemble"].includes(assetType)) {
+      // 重新渲染单张图像 (继承原 Prompt 基础以确保指令连续性)
+      const historyArr = data.history[assetType];
+      const activeItem = historyArr[data.activeVersions[assetType]];
+      const prompt = activeItem.prompt;
+      const prefix = `${assetType}_${timestamp}`;
+      const targetName = `${prefix}.png`;
+
+      // 混合生图策略：主展品 hero_1 用 Pro 免费版，其余付费版高并发以保障极速响应
+      const args = ["image", "generate", "--prompt", prompt, "--size", "4:3", "--watermark", "false", "--out-dir", targetDir, "--out-prefix", prefix];
+      if (assetType === "hero_1") {
+        args.push("--model", "qwen-image-2.0-pro-2026-06-22");
+      }
+
+      await runWithRetry(args);
+
+      // 重命名下载的图
+      const files = fs.readdirSync(targetDir);
+      const generatedFile = files.find(f => f.startsWith(`${prefix}_`));
+      if (generatedFile) {
+        fs.renameSync(path.join(targetDir, generatedFile), path.join(targetDir, targetName));
+      } else {
+        throw new Error("Failed to locate generated image file");
+      }
+
+      const newItem = {
+        imagePath: `http://localhost:3001/assets/generated/${curationId}/${targetName}`,
+        prompt: prompt
+      };
+      
+      // subProducts 特殊保留字段
+      if (assetType === "subProduct1" || assetType === "subProduct2") {
+        newItem.name = activeItem.name;
+        newItem.desc = activeItem.desc;
+      }
+
+      data.history[assetType].push(newItem);
+      data.activeVersions[assetType] = data.history[assetType].length - 1;
+
+    } else if (assetType === "video") {
+      // 重新生成 5 秒动态氛围视频：基于当前活跃选择的 hero_1 帧
+      const activeHero1 = data.history.hero_1[data.activeVersions.hero_1];
+      const hero1LocalPath = path.join(targetDir, path.basename(activeHero1.imagePath));
+      const videoFile = `ambient_${timestamp}.mp4`;
+      const videoPrompt = `The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic`;
+
+      await runWithRetry([
+        "video", "generate",
+        "--image", hero1LocalPath,
+        "--prompt", videoPrompt,
+        "--resolution", "720P",
+        "--duration", "5",
+        "--watermark", "false",
+        "--download", path.join(targetDir, videoFile)
+      ]);
+
+      data.history.video.push({
+        videoPath: `http://localhost:3001/assets/generated/${curationId}/${videoFile}`,
+        prompt: videoPrompt
+      });
+      data.activeVersions.video = data.history.video.length - 1;
+    }
+
+    fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2));
+    res.json(data);
+  } catch (err) {
+    console.error("Regenerate asset failed", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
