@@ -60,9 +60,22 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       fs.renameSync(req.file.path, sourceImagePath);
     }
 
+    // 提取参考图特征以保证主体一致性 (Qwen-VL)
+    let productVisualDetails = "";
+    if (sourceImagePath) {
+      sendProgress(curationId, 1, "processing", "Qwen-VL 正在分析参考图视觉属性...");
+      const describePrompt = "Describe the main product in this image in detail: shape, color, material, texture, labels, and text. Format the response as a single concise English paragraph, without any explanation.";
+      try {
+        const describeResult = await execAsync(`bl vision describe --image "${sourceImagePath}" --prompt "${describePrompt}"`);
+        productVisualDetails = describeResult.stdout.trim();
+      } catch (err) {
+        console.error("Vision describe failed", err);
+      }
+    }
+
     // Step 1: 文案策划 (Qwen3.7-max)
     sendProgress(curationId, 1, "processing", "大语言模型策划商品文案中...");
-    const textPrompt = `写一篇关于商品描述“${description}”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
+    const textPrompt = `写一篇关于商品描述“${description}${productVisualDetails ? `，其视觉特征为：${productVisualDetails}` : ''}”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
     
     const textResult = await execAsync(`bl text chat --message "${textPrompt}"`);
     const rawStdout = textResult.stdout.trim();
@@ -76,7 +89,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
 
     // Step 2: 意境商业图渲染 (Qwen-Image 2.0)
     sendProgress(curationId, 2, "processing", "Qwen-Image 2.0 绘制产品商业大片中...");
-    const imgPrompt = `${description}, elegant minimalism, wabi-sabi background, warm evening sunlight, shot on 35mm film, award-winning photography style`;
+    const imgPrompt = `${productVisualDetails || description}, elegant minimalism, wabi-sabi background, warm evening sunlight, shot on 35mm film, award-winning photography style`;
     const imgOutDir = targetDir;
     
     await execAsync(`bl image generate --prompt "${imgPrompt}" --size 4:3 --watermark false --out-dir "${imgOutDir}" --out-prefix hero`);
