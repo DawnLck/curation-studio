@@ -15,6 +15,7 @@ export const StudioScreen = ({ onGenerate, onShowGuide }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [history, setHistory] = useState([]);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [selectedTheme, setSelectedTheme] = useState("quiet-minimal"); // "quiet-minimal" | "viral-meme"
 
   // 实时展现生成中产物的数据状态
   const [curationProgressData, setCurationProgressData] = useState({
@@ -115,6 +116,7 @@ export const StudioScreen = ({ onGenerate, onShowGuide }) => {
         formData.append("description", text);
         formData.append("subProduct1", subProduct1);
         formData.append("subProduct2", subProduct2);
+        formData.append("theme", selectedTheme);
         if (imageFile) {
           formData.append("image", imageFile);
         }
@@ -440,15 +442,36 @@ export const StudioScreen = ({ onGenerate, onShowGuide }) => {
               )}
             </div>
 
-            {/* Style selector (Static Minimum Curation) */}
-            <div className="space-y-2">
-              <label className="text-[10px] tracking-wider font-semibold text-charcoal uppercase block">Step 3: 匹配美学系统</label>
-              <div className="flex items-center gap-3 p-4 bg-sand-50 border border-sand-300 rounded">
-                <FileText size={16} className="text-amber-800" />
-                <div>
-                  <h4 className="text-xs font-semibold text-charcoal">静默极简 (Quiet Minimalist)</h4>
-                  <p className="text-[10px] text-gray-500">已自动适配：白沙色调、Playfair Display 衬线体、留白排版</p>
-                </div>
+            {/* Style selector */}
+            <div className="space-y-2.5">
+              <label className="text-[10px] tracking-wider font-semibold text-charcoal uppercase block">Step 3: 选择策展美学风格</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTheme("quiet-minimal")}
+                  className={`p-4 border rounded text-left transition-all duration-300 cursor-pointer flex flex-col justify-between h-[105px] ${selectedTheme === "quiet-minimal" ? 'border-amber-800 bg-amber-50/30 ring-1 ring-amber-800' : 'border-sand-300 bg-sand-50 hover:bg-sand-100'}`}
+                >
+                  <div>
+                    <h4 className="text-xs font-semibold text-charcoal flex items-center gap-1">
+                      <span>静默极简</span>
+                      <span className="text-[8px] font-sans font-bold text-amber-800 bg-amber-100 px-1 rounded uppercase tracking-wider scale-90">Wabi-Sabi</span>
+                    </h4>
+                    <p className="text-[9px] text-gray-500 leading-normal mt-1">东方禅意、磨砂白陶、柔光与叶影、Playfair 衬线字体排版。</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTheme("viral-meme")}
+                  className={`p-4 border rounded text-left transition-all duration-300 cursor-pointer flex flex-col justify-between h-[105px] ${selectedTheme === "viral-meme" ? 'border-amber-800 bg-amber-50/30 ring-1 ring-amber-800' : 'border-sand-300 bg-sand-50 hover:bg-sand-100'}`}
+                >
+                  <div>
+                    <h4 className="text-xs font-semibold text-charcoal flex items-center gap-1">
+                      <span>疯狂梗图</span>
+                      <span className="text-[8px] font-sans font-bold text-amber-800 bg-amber-100 px-1 rounded uppercase tracking-wider scale-90">Viral Meme</span>
+                    </h4>
+                    <p className="text-[9px] text-gray-500 leading-normal mt-1">爆笑高能、可爱搞笑白猫/哈士奇手捧商品图、黑粗框漫画板式。</p>
+                  </div>
+                </button>
               </div>
             </div>
 

@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Play, Pause, Volume2 } from "lucide-react";
 
-export const AudioNarration = ({ audioSrc }) => {
+export const AudioNarration = ({ audioSrc, theme }) => {
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -15,8 +15,13 @@ export const AudioNarration = ({ audioSrc }) => {
     setIsPlaying(!isPlaying);
   };
 
+  const isMeme = theme === "viral-meme";
+  const cardClass = isMeme 
+    ? "flex items-center justify-between p-5 bg-white border-4 border-charcoal rounded-none shadow-[6px_6px_0px_0px_rgba(45,45,45,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_rgba(45,45,45,1)] transition-all duration-200 h-full"
+    : "flex items-center justify-between p-5 bg-white border border-sand-300 rounded-lg shadow-xs h-full";
+
   return (
-    <div className="flex items-center justify-between p-5 bg-white border border-sand-300 rounded-lg shadow-xs h-full">
+    <div className={cardClass}>
       <audio ref={audioRef} src={audioSrc} onEnded={() => setIsPlaying(false)} />
       <div className="flex items-center gap-4">
         <div className="p-3 rounded-full bg-sand-100 text-amber-800">

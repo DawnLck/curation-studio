@@ -134,8 +134,15 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
     );
   };
 
+  // 动态主题配色与风格解析 (Neo-brutalism vs Wabi-Sabi)
+  const isMeme = data.theme === "viral-meme";
+  const bgClass = isMeme ? "w-full min-h-screen py-16 bg-[#fffdeb] grid-bg-meme" : "w-full min-h-screen py-16 bg-sand-200";
+  const cardClass = isMeme 
+    ? "bg-white border-4 border-charcoal rounded-none shadow-[5px_5px_0px_0px_rgba(45,45,45,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[7px_7px_0px_0px_rgba(45,45,45,1)] transition-all duration-300 relative overflow-hidden"
+    : "bg-white border border-sand-300 rounded-lg shadow-xs hover:shadow-md transition-shadow relative overflow-hidden";
+
   return (
-    <div className="w-full min-h-screen py-16 bg-sand-200">
+    <div className={bgClass}>
       <div className="max-w-5xl mx-auto px-6 relative">
         
         {/* Floating Return Button */}
@@ -148,8 +155,13 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
 
         {/* Header */}
         <div className="text-center border-b border-sand-400 pb-8 mb-12 animate-fade-in pt-4">
-          <span className="text-[10px] font-sans tracking-[0.3em] text-gray-500 uppercase">The Art of Curation</span>
-          <h1 className="font-serif text-4xl md:text-5xl font-light text-charcoal mt-3 mb-1">
+          <span className="text-[10px] font-sans tracking-[0.3em] text-gray-500 uppercase">
+            {isMeme ? "🔥 爆款表情包宣发 / Viral Meme Curation" : "The Art of Curation"}
+          </span>
+          <h1 className={isMeme 
+            ? "font-sans font-black text-4xl md:text-5xl text-charcoal mt-4 mb-2 tracking-tight uppercase"
+            : "font-serif text-4xl md:text-5xl font-light text-charcoal mt-3 mb-1"
+          }>
             {data.productName}
           </h1>
         </div>
@@ -158,7 +170,7 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[220px]">
           
           {/* Box 1: Hero Image (3D Card Carousel with live versions) */}
-          <div className="md:col-span-2 md:row-span-2 rounded-lg border border-sand-300 bg-white overflow-hidden shadow-xs hover:shadow-md transition-shadow relative">
+          <div className={`md:col-span-2 md:row-span-2 ${cardClass}`}>
             {renderRegeneratingOverlay(activeImageIdx === 0 ? "hero_1" : activeImageIdx === 1 ? "hero_2" : "hero_3")}
             {renderControlPanel(activeImageIdx === 0 ? "hero_1" : activeImageIdx === 1 ? "hero_2" : "hero_3")}
             <ThreeDCard>
@@ -169,7 +181,7 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
                   className="w-full h-full object-cover select-none pointer-events-none absolute inset-0 transition-all duration-500"
                 />
                 <div className="absolute top-4 left-4 bg-white/80 backdrop-blur-xs border border-sand-300 px-3 py-1 text-[9px] uppercase tracking-wider text-gray-600 rounded z-10 font-bold">
-                  分镜 {activeImageIdx + 1} / 3 · Qwen-Image 2.0
+                  {isMeme ? `Meme 梗图 ${activeImageIdx + 1} / 3` : `分镜 ${activeImageIdx + 1} / 3`} · Qwen-Image 2.0
                 </div>
                 {/* Switcher Tabs */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full z-10">
@@ -182,7 +194,7 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
                       }}
                       className={`text-[8px] font-sans font-semibold px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${activeImageIdx === idx ? 'bg-white text-charcoal' : 'text-gray-300 hover:text-white'}`}
                     >
-                      分镜 {idx + 1}
+                      {isMeme ? `方案 ${idx + 1}` : `分镜 ${idx + 1}`}
                     </button>
                   ))}
                 </div>
@@ -202,12 +214,14 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
           </div>
 
           {/* Box 2: Editorial Text */}
-          <div className="bg-white border border-sand-300 rounded-lg p-8 md:row-span-2 flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow relative overflow-hidden">
+          <div className={`p-8 md:row-span-2 flex flex-col justify-between ${cardClass}`}>
             {renderRegeneratingOverlay("editorial")}
             {renderControlPanel("editorial")}
             <div>
-              <span className="text-[9px] font-sans tracking-[0.2em] text-amber-800 font-semibold uppercase">社论推荐 / Editorial</span>
-              <h3 className="font-serif text-2xl font-normal text-charcoal mt-4 mb-4 leading-snug">
+              <span className="text-[9px] font-sans tracking-[0.2em] text-amber-800 font-semibold uppercase">
+                {isMeme ? "🔥 爆款宣发 / Viral Meme" : "社论推荐 / Editorial"}
+              </span>
+              <h3 className={`${isMeme ? 'font-sans font-black text-2xl' : 'font-serif text-2xl font-normal'} text-charcoal mt-4 mb-4 leading-snug`}>
                 {activeEditorial.headline}
               </h3>
               <div className="text-xs leading-relaxed text-gray-600">
@@ -217,7 +231,7 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
             <div className="border-t border-sand-200 pt-4 text-[9px] text-gray-400 font-sans flex items-center justify-between">
               <span>💡 由 Qwen3.7-max 润色</span>
               <button 
-                onClick={() => setModalContent({ title: "社论广告文案策划提示词", prompt: "基于主商品细节和搭配商品细节，撰写符合 wabi-sabi 美学的极简杂志广告短文。" })}
+                onClick={() => setModalContent({ title: "社论广告文案策划提示词", prompt: isMeme ? "基于主商品搭配和滑稽卖点，写一段幽默吸睛的网络梗词。" : "基于主商品细节和搭配商品细节，撰写符合 wabi-sabi 美学的极简杂志广告短文。" })}
                 className="text-gray-400 hover:text-gray-600 cursor-pointer"
               >
                 <Info size={10} />
@@ -226,11 +240,11 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
           </div>
 
           {/* Box 3: Ambient Video (HappyHorse) */}
-          <div className="bg-white border border-sand-300 rounded-lg overflow-hidden md:col-span-2 md:row-span-1 shadow-xs hover:shadow-md transition-shadow relative flex items-center justify-center">
+          <div className={`md:col-span-2 md:row-span-1 flex items-center justify-center ${cardClass}`}>
             {renderRegeneratingOverlay("video")}
             {renderControlPanel("video")}
             <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-xs border border-sand-300 px-2 py-0.5 text-[8px] uppercase tracking-wider text-gray-600 rounded z-10 font-bold">
-              HappyHorse 动态氛围 (5s)
+              {isMeme ? "搞笑动图表情包 (5s)" : "HappyHorse 动态氛围 (5s)"}
             </div>
              <video
               src={activeVideo.videoPath}
@@ -238,7 +252,7 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
               loop
               muted
               playsInline
-              key={activeVideo.videoPath} // 强制视频组件在 URL 改变时重新装载
+              key={activeVideo.videoPath}
               className={`w-full h-full transition-all duration-300 ${videoFit === "cover" ? "object-cover" : "object-contain bg-charcoal/5"}`}
             />
             {/* Control buttons group */}
@@ -270,12 +284,12 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
           {/* Box 4: Audio Player (CosyVoice) */}
           <div className="md:col-span-1 md:row-span-1 relative overflow-hidden">
             {renderRegeneratingOverlay("editorial")}
-            <AudioNarration audioSrc={activeEditorial.voicePath || data.voicePath} key={activeEditorial.voicePath} />
+            <AudioNarration audioSrc={activeEditorial.voicePath || data.voicePath} key={activeEditorial.voicePath} theme={data.theme} />
           </div>
 
           {/* Box 5: Sub-product 1 Card */}
           {activeSub1 && (
-            <div className="bg-white border border-sand-300 rounded-lg overflow-hidden md:col-span-1 md:row-span-1 shadow-xs hover:shadow-md transition-shadow relative flex flex-col justify-between p-4 group">
+            <div className={`flex flex-col justify-between p-4 group ${cardClass}`}>
               {renderRegeneratingOverlay("subProduct1")}
               {renderControlPanel("subProduct1")}
               <div className="w-full h-[120px] rounded overflow-hidden border border-sand-200 relative">
@@ -292,7 +306,9 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
                 </button>
               </div>
               <div className="mt-2.5">
-                <span className="text-[7px] font-sans tracking-wider text-amber-800 font-bold uppercase">搭配单品一</span>
+                <span className="text-[7px] font-sans tracking-wider text-amber-800 font-bold uppercase">
+                  {isMeme ? "搞笑搭配一" : "搭配单品一"}
+                </span>
                 <h4 className="font-serif text-xs font-semibold text-charcoal truncate mt-0.5">{activeSub1.name}</h4>
                 <p className="text-[9px] text-gray-500 font-sans truncate leading-relaxed mt-0.5">{activeSub1.desc}</p>
               </div>
@@ -301,7 +317,7 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
 
           {/* Box 6: Sub-product 2 Card */}
           {activeSub2 && (
-            <div className="bg-white border border-sand-300 rounded-lg overflow-hidden md:col-span-1 md:row-span-1 shadow-xs hover:shadow-md transition-shadow relative flex flex-col justify-between p-4 group">
+            <div className={`flex flex-col justify-between p-4 group ${cardClass}`}>
               {renderRegeneratingOverlay("subProduct2")}
               {renderControlPanel("subProduct2")}
               <div className="w-full h-[120px] rounded overflow-hidden border border-sand-200 relative">
@@ -318,7 +334,9 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
                 </button>
               </div>
               <div className="mt-2.5">
-                <span className="text-[7px] font-sans tracking-wider text-amber-800 font-bold uppercase">搭配单品二</span>
+                <span className="text-[7px] font-sans tracking-wider text-amber-800 font-bold uppercase">
+                  {isMeme ? "搞笑搭配二" : "搭配单品二"}
+                </span>
                 <h4 className="font-serif text-xs font-semibold text-charcoal truncate mt-0.5">{activeSub2.name}</h4>
                 <p className="text-[9px] text-gray-500 font-sans truncate leading-relaxed mt-0.5">{activeSub2.desc}</p>
               </div>
@@ -326,7 +344,7 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
           )}
 
           {/* Box 7: Curation Feature Description */}
-          <div className="bg-white border border-sand-300 rounded-lg p-6 md:col-span-1 md:row-span-1 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between">
+          <div className={`p-6 md:col-span-1 md:row-span-1 flex flex-col justify-between ${cardClass}`}>
             <div>
               <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">04 · 空间陈列特征</span>
               <div className="space-y-3.5 mt-3">
@@ -345,11 +363,11 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
 
           {/* Box 8: Ensemble Group Curation Banner */}
           {activeEnsemble && (
-            <div className="bg-white border border-sand-300 rounded-lg overflow-hidden md:col-span-3 min-h-[280px] shadow-xs hover:shadow-md transition-shadow relative flex items-center justify-center group">
+            <div className={`md:col-span-3 min-h-[280px] flex items-center justify-center group ${cardClass}`}>
               {renderRegeneratingOverlay("ensemble")}
               {renderControlPanel("ensemble")}
               <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-xs border border-sand-300 px-3 py-1.5 text-[8px] uppercase tracking-wider text-gray-600 rounded z-10 font-sans font-semibold">
-                套系全景合影 / Ensemble Lookbook
+                {isMeme ? "Meme 大合影全景 / Meme Lookbook" : "套系全景合影 / Ensemble Lookbook"}
               </div>
               <img
                 src={activeEnsemble.imagePath}
@@ -381,7 +399,10 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
         <div className="text-center mt-12">
           <button
             onClick={onReset}
-            className="px-6 py-2.5 rounded bg-charcoal text-sand-100 hover:bg-amber-900 transition-colors text-xs font-sans tracking-widest uppercase cursor-pointer"
+            className={isMeme 
+              ? "px-6 py-2.5 bg-amber-400 text-charcoal border-4 border-charcoal font-sans font-black tracking-wider uppercase cursor-pointer hover:bg-amber-500 shadow-[4px_4px_0px_0px_rgba(45,45,45,1)] hover:translate-y-[-2px] hover:translate-x-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(45,45,45,1)] transition-all duration-200" 
+              : "px-6 py-2.5 rounded bg-charcoal text-sand-100 hover:bg-amber-900 transition-colors text-xs font-sans tracking-widest uppercase cursor-pointer"
+            }
           >
             重新策展产品
           </button>

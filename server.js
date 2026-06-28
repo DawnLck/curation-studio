@@ -77,6 +77,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
   const description = req.body.description || "";
   const subProduct1Raw = req.body.subProduct1 || "";
   const subProduct2Raw = req.body.subProduct2 || "";
+  const theme = req.body.theme || "quiet-minimal";
   const curationId = `curation-${Date.now()}`;
   const targetDir = path.join(__dirname, "public", "assets", "generated", curationId);
   fs.mkdirSync(targetDir, { recursive: true });
@@ -117,7 +118,23 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     let subProduct2Name = "";
     
     sendProgress(curationId, 1, "processing", "AI 创意搭配师脑暴搭配建议中...");
-    const brainPrompt = `你是一个顶级空间美学与电商摄影陈列大师。主单品是“${description}${productVisualDetails ? ` (外观细节: ${productVisualDetails})` : ''}”。
+    const isMeme = theme === "viral-meme";
+    
+    const brainPrompt = isMeme
+      ? `你是一个搞怪、幽默、充满网络流行梗和表情包卖点的沙雕宣发搭配大师。主单品是“${description}${productVisualDetails ? ` (外观细节: ${productVisualDetails})` : ''}”。
+我们想为其搭配两个具有搞笑、反差萌或幽默互动感的配件单品，放置在同一个趣味场景中。
+副商品一建议描述为：${subProduct1Raw || '由你自动脑暴一个最具有搞怪趣味且与主品产生奇妙化学反应的配件'}。
+副商品二建议描述为：${subProduct2Raw || '由你自动脑暴第二个恶搞配件'}。
+
+请为这两个副单品分别设计用于 AI 生图的英文视觉描述（包含器形、材质、色彩，风格偏向趣味滑稽，以便送入图像生成器）。
+直接输出 JSON 格式（不要包含 markdown 标记），包含以下字段：
+{
+  "sub1Name": "副商品一中文名称（戏谑、搞怪，如'防抑郁神器桌布'）",
+  "sub1Desc": "副商品一的英文视觉描述，用于生图 prompt，搞怪幽默",
+  "sub2Name": "副商品二中文名称（戏谑、搞怪，如'发疯小黄鸭香插'）",
+  "sub2Desc": "副商品二的英文视觉描述，用于生图 prompt，搞怪幽默"
+}`
+      : `你是一个顶级空间美学与电商摄影陈列大师。主单品是“${description}${productVisualDetails ? ` (外观细节: ${productVisualDetails})` : ''}”。
 我们想为其搭配两个小单品，放置在同一个极简、wabi-sabi风格的场景中。
 副商品一建议描述为：${subProduct1Raw || '由你自动脑暴一个最搭配且能够呼应材质色彩的单品'}。
 副商品二建议描述为：${subProduct2Raw || '由你自动脑暴第二个搭配单品'}。
@@ -146,15 +163,17 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       subProduct2Desc = rawBrainJson.sub2Desc || "a styled lifestyle item, elegant minimalist style";
     } catch (err) {
       console.error("AI Stylist brainstorm failed, using fallbacks", err);
-      subProduct1Name = subProduct1Raw || "置物盘";
-      subProduct1Desc = "a styled ceramic tray, minimalist and warm lighting";
-      subProduct2Name = subProduct2Raw || "香薰摆件";
-      subProduct2Desc = "linen fabric textile, warm neutral shades";
+      subProduct1Name = subProduct1Raw || (isMeme ? "尖叫鸡摆件" : "置物盘");
+      subProduct1Desc = isMeme ? "a goofy yellow rubber chicken toy, funny product shot" : "a styled ceramic tray, minimalist and warm lighting";
+      subProduct2Name = subProduct2Raw || (isMeme ? "戏精猫爪垫" : "香薰摆件");
+      subProduct2Desc = isMeme ? "a funny fluffy cat paw coaster, comedic visual style" : "linen fabric textile, warm neutral shades";
     }
 
     // Step 1: 文案策划 (Qwen3.7-max)
     sendProgress(curationId, 1, "processing", "大语言模型策划商品文案中...");
-    const textPrompt = `写一篇关于商品展示套系“主商品为：${description}${productVisualDetails ? `（视觉特征：${productVisualDetails}）` : ''}，搭配商品包括：${subProduct1Name}（${subProduct1Desc}）与${subProduct2Name}（${subProduct2Desc}）”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
+    const textPrompt = isMeme
+      ? `写一篇关于商品展示套系“主商品为：${description}${productVisualDetails ? `（视觉特征：${productVisualDetails}）` : ''}，搭配商品包括：${subProduct1Name}（${subProduct1Desc}）与${subProduct2Name}（${subProduct2Desc}）”的极其搞笑幽默的、充满网络神梗和沙雕卖点的情感宣发小段子。输出JSON格式，含有两个字段：headline（字数在10字以内的搞笑标语，如'人，进来买爆！'）, body（80字左右高能幽默正文）。直接输出JSON字符串，不要包含markdown标记。`
+      : `写一篇关于商品展示套系“主商品为：${description}${productVisualDetails ? `（视觉特征：${productVisualDetails}）` : ''}，搭配商品包括：${subProduct1Name}（${subProduct1Desc}）与${subProduct2Name}（${subProduct2Desc}）”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
     
     const textResult = await runWithRetry([
       "text", "chat",
@@ -165,7 +184,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     const cleanedJsonStr = rawStdout.replace(/```json|```/g, "").trim();
     const rawJson = JSON.parse(cleanedJsonStr);
     const curationText = {
-      headline: rawJson.headline || rawJson.Headline || rawJson.title || "静默新品",
+      headline: rawJson.headline || rawJson.Headline || rawJson.title || (isMeme ? "人，进来。" : "静默新品"),
       body: rawJson.body || rawJson.Body || rawJson.content || ""
     };
     sendProgress(curationId, 1, "processing", "大语言模型文案策划完成！", { editorial: curationText });
@@ -175,14 +194,30 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     const imgOutDir = targetDir;
     
     // 主展品分镜提示词
-    const imgPrompt1 = `A medium eye-level product shot of ${productVisualDetails || description}, quiet minimalist room, wabi-sabi concrete wall, warm evening light casting elegant leaf shadows, 35mm film photography, commercial product shot`;
-    const imgPrompt2 = `An extreme close-up macro shot of ${productVisualDetails || description}, focusing on its intricate surface texture, material grains and craftsmanship details, clean neutral background, shallow depth of field, studio lighting`;
-    const imgPrompt3 = `A beautiful lifestyle shot of ${productVisualDetails || description} resting on a rustic wooden table, warm and cozy aesthetic, natural daylight, soft focus background, candid lifestyle photography`;
+    const imgPrompt1 = isMeme
+      ? `A hilarious meme graphic of a cute white cat wearing a brown cowboy hat, holding ${productVisualDetails || description} with a goofy cute facial expression, clear studio light, plain clean background, meme expressions style, professional funny poster illustration`
+      : `A medium eye-level product shot of ${productVisualDetails || description}, quiet minimalist room, wabi-sabi concrete wall, warm evening light casting elegant leaf shadows, 35mm film photography, commercial product shot`;
+      
+    const imgPrompt2 = isMeme
+      ? `A funny macro close-up shot of ${productVisualDetails || description} being pointed at by a cute dog's fluffy paw with funny cartoon text balloon pointing at it, studio background, comedic product photo`
+      : `An extreme close-up macro shot of ${productVisualDetails || description}, focusing on its intricate surface texture, material grains and craftsmanship details, clean neutral background, shallow depth of field, studio lighting`;
+      
+    const imgPrompt3 = isMeme
+      ? `A comedic lifestyle scene showing a cute fluffy kitten taking a selfie together with ${productVisualDetails || description} in a cozy room, humorous selfie photography angle, warm and bright colors`
+      : `A beautiful lifestyle shot of ${productVisualDetails || description} resting on a rustic wooden table, warm and cozy aesthetic, natural daylight, soft focus background, candid lifestyle photography`;
     
     // 副单品及搭配合照提示词
-    const imgPromptSub1 = `A beautiful eye-level product shot of ${subProduct1Desc}, quiet minimalist wabi-sabi background, warm evening shadows, 35mm film photography`;
-    const imgPromptSub2 = `A beautiful eye-level product shot of ${subProduct2Desc}, quiet minimalist wabi-sabi background, warm evening shadows, 35mm film photography`;
-    const imgPromptEnsemble = `A professional styled lookbook shot showing the main product ${productVisualDetails || description} styled harmoniously together with ${subProduct1Desc} and ${subProduct2Desc} on a concrete table, soft afternoon sunlight casting shadows, 35mm film photography, minimalist wabi-sabi setup`;
+    const imgPromptSub1 = isMeme
+      ? `A funny product shot of ${subProduct1Desc}, comedic presentation, bright pastel background, studio lighting`
+      : `A beautiful eye-level product shot of ${subProduct1Desc}, quiet minimalist wabi-sabi background, warm evening shadows, 35mm film photography`;
+      
+    const imgPromptSub2 = isMeme
+      ? `A funny product shot of ${subProduct2Desc}, comedic presentation, bright pastel background, studio lighting`
+      : `A beautiful eye-level product shot of ${subProduct2Desc}, quiet minimalist wabi-sabi background, warm evening shadows, 35mm film photography`;
+      
+    const imgPromptEnsemble = isMeme
+      ? `A professional styled meme lookbook photo showing a group of cute fluffy animals (cats and dogs) posing together like models with ${productVisualDetails || description}, ${subProduct1Desc} and ${subProduct2Desc} on a table, funny faces, high-quality comedic e-commerce banner`
+      : `A professional styled lookbook shot showing the main product ${productVisualDetails || description} styled harmoniously together with ${subProduct1Desc} and ${subProduct2Desc} on a concrete table, soft afternoon sunlight casting shadows, 35mm film photography, minimalist wabi-sabi setup`;
 
     // 辅助命名重构函数
     const renameFile = (prefix, targetName) => {
@@ -295,7 +330,9 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
 
     // Step 3: 动态氛围视频生成 (HappyHorse 1.1)
     sendProgress(curationId, 3, "processing", "HappyHorse 1.1 正在生成 5 秒动态呼吸运镜视频...");
-    const videoPrompt = `The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic`;
+    const videoPrompt = isMeme
+      ? "The cute cat holds the product and does a funny dance, eyes blinking, camera zoom movement, humorous comic animation"
+      : "The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic";
     
     // 传入主商品第一张分镜作为视频的起始帧
     await runWithRetry([
@@ -325,8 +362,8 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     
     const finalJSON = {
       productName: description.substring(0, 10) || "主商品首发",
-      subtitle: "自适应智能策展单品",
-      theme: "quiet-minimal",
+      subtitle: isMeme ? "搞笑高能Meme梗图" : "自适应智能策展单品",
+      theme: theme,
       activeVersions: {
         editorial: 0,
         hero_1: 0,
@@ -519,7 +556,11 @@ app.post("/api/curate/regenerate-asset", async (req, res) => {
       const sub1 = data.history.subProduct1[data.activeVersions.subProduct1];
       const sub2 = data.history.subProduct2[data.activeVersions.subProduct2];
 
-      const textPrompt = `写一篇关于商品展示套系“主商品为：${desc}，搭配商品包括：${sub1.name} 与 ${sub2.name}”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
+      const theme = data.theme || "quiet-minimal";
+      const isMeme = theme === "viral-meme";
+      const textPrompt = isMeme
+        ? `写一篇关于商品展示套系“主商品为：${desc}，搭配商品包括：${sub1.name} 与 ${sub2.name}”的极其搞笑幽默的、充满网络神梗和沙雕卖点的情感宣发小段子。输出JSON格式，含有两个字段：headline（字数在10字以内的搞笑标题）, body（80字左右高能幽默正文）。直接输出JSON字符串，不要包含markdown标记。`
+        : `写一篇关于商品展示套系“主商品为：${desc}，搭配商品包括：${sub1.name} 与 ${sub2.name}”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
       const textResult = await runWithRetry([
         "text", "chat",
         "--message", textPrompt,
@@ -593,7 +634,11 @@ app.post("/api/curate/regenerate-asset", async (req, res) => {
       const activeHero1 = data.history.hero_1[data.activeVersions.hero_1];
       const hero1LocalPath = path.join(targetDir, path.basename(activeHero1.imagePath));
       const videoFile = `ambient_${timestamp}.mp4`;
-      const videoPrompt = `The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic`;
+      const theme = data.theme || "quiet-minimal";
+      const isMeme = theme === "viral-meme";
+      const videoPrompt = isMeme
+        ? "The cute cat holds the product and does a funny dance, eyes blinking, camera zoom movement, humorous comic animation"
+        : "The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic";
 
       await runWithRetry([
         "video", "generate",
