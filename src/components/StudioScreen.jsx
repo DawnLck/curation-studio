@@ -3,6 +3,9 @@ import { Sparkles, Upload, FileText, Cpu, Eye } from "lucide-react";
 
 export const StudioScreen = ({ onGenerate }) => {
   const [text, setText] = useState("");
+  const [subProduct1, setSubProduct1] = useState("");
+  const [subProduct2, setSubProduct2] = useState("");
+  const [isExpandSuggested, setIsExpandSuggested] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   
@@ -15,7 +18,10 @@ export const StudioScreen = ({ onGenerate }) => {
   // 实时展现生成中产物的数据状态
   const [curationProgressData, setCurationProgressData] = useState({
     editorial: null,
-    imagePath: null,
+    imagePaths: null,
+    sub1Path: null,
+    sub2Path: null,
+    ensemblePath: null,
     videoPath: null,
     voicePath: null
   });
@@ -71,7 +77,10 @@ export const StudioScreen = ({ onGenerate }) => {
             "/assets/minimalist-vase/hero_1.png",
             "/assets/minimalist-vase/hero_2.png",
             "/assets/minimalist-vase/hero_3.png"
-          ]
+          ],
+          sub1Path: "/assets/minimalist-vase/sub_1.png",
+          sub2Path: "/assets/minimalist-vase/sub_2.png",
+          ensemblePath: "/assets/minimalist-vase/ensemble.png"
         }));
       }, 1000);
 
@@ -103,6 +112,8 @@ export const StudioScreen = ({ onGenerate }) => {
       try {
         const formData = new FormData();
         formData.append("description", text);
+        formData.append("subProduct1", subProduct1);
+        formData.append("subProduct2", subProduct2);
         if (imageFile) {
           formData.append("image", imageFile);
         }
@@ -210,7 +221,7 @@ export const StudioScreen = ({ onGenerate }) => {
               <div className="space-y-2.5 border-t border-sand-300 pt-6">
                 {[
                   "文案策划 (Qwen3.7)",
-                  "意境渲染 (Qwen-Image)",
+                  "意境渲染 & 搭配 (Qwen-Image)",
                   "动态视频 (HappyHorse)",
                   "声音旁白 (CosyVoice)",
                   "数据拼装 (Bento Inject)"
@@ -247,23 +258,52 @@ export const StudioScreen = ({ onGenerate }) => {
                   </div>
                 )}
 
-                {/* 2. Image Preview (Supports 3 Storyboards) */}
+                {/* 2. Image Preview (Supports 3 Storyboards + 2 Subs + 1 Ensemble) */}
                 {(curationProgressData.imagePaths || curationProgressData.imagePath) && (
-                  <div className="animate-fade-in space-y-1 pb-3 border-b border-sand-200">
-                    <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">02 · 意境大片分镜 (3张)</span>
-                    <div className="grid grid-cols-3 gap-2">
-                      {curationProgressData.imagePaths ? (
-                        curationProgressData.imagePaths.map((path, idx) => (
-                          <div key={idx} className="w-full h-[65px] rounded overflow-hidden border border-sand-300">
-                            <img src={path} alt={`Storyboard ${idx+1}`} className="w-full h-full object-cover animate-fade-in" />
+                  <div className="animate-fade-in space-y-3.5 pb-3 border-b border-sand-200">
+                    <div>
+                      <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">02 · 意境大片分镜 (3张)</span>
+                      <div className="grid grid-cols-3 gap-2 mt-1">
+                        {curationProgressData.imagePaths ? (
+                          curationProgressData.imagePaths.map((path, idx) => (
+                            <div key={idx} className="w-full h-[60px] rounded overflow-hidden border border-sand-300">
+                              <img src={path} alt={`Storyboard ${idx+1}`} className="w-full h-full object-cover animate-fade-in" />
+                            </div>
+                          ))
+                        ) : (
+                          <div className="col-span-3 w-full h-[120px] rounded overflow-hidden border border-sand-300">
+                            <img src={curationProgressData.imagePath} alt="Emerging Image" className="w-full h-full object-cover" />
                           </div>
-                        ))
-                      ) : (
-                        <div className="col-span-3 w-full h-[120px] rounded overflow-hidden border border-sand-300">
-                          <img src={curationProgressData.imagePath} alt="Emerging Image" className="w-full h-full object-cover" />
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
+
+                    {/* Sub-products & Ensemble emerging thumbnails */}
+                    {(curationProgressData.sub1Path || curationProgressData.sub2Path || curationProgressData.ensemblePath) && (
+                      <div className="animate-fade-in pt-2 border-t border-dashed border-sand-200">
+                        <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">02.5 · 搭配辅单品与全景LOOKBOOK</span>
+                        <div className="grid grid-cols-3 gap-2 mt-1">
+                          {curationProgressData.sub1Path && (
+                            <div className="w-full h-[60px] rounded overflow-hidden border border-sand-300 relative group">
+                              <img src={curationProgressData.sub1Path} alt="Sub 1" className="w-full h-full object-cover animate-fade-in" />
+                              <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[7px] text-white text-center py-0.5 font-sans truncate">辅件一</div>
+                            </div>
+                          )}
+                          {curationProgressData.sub2Path && (
+                            <div className="w-full h-[60px] rounded overflow-hidden border border-sand-300 relative group">
+                              <img src={curationProgressData.sub2Path} alt="Sub 2" className="w-full h-full object-cover animate-fade-in" />
+                              <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[7px] text-white text-center py-0.5 font-sans truncate">辅件二</div>
+                            </div>
+                          )}
+                          {curationProgressData.ensemblePath && (
+                            <div className="w-full h-[60px] rounded overflow-hidden border border-sand-300 relative group">
+                              <img src={curationProgressData.ensemblePath} alt="Ensemble" className="w-full h-full object-cover animate-fade-in" />
+                              <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[7px] text-white text-center py-0.5 font-sans truncate">套系合照</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -329,6 +369,43 @@ export const StudioScreen = ({ onGenerate }) => {
                 placeholder="例如：一款具有东方禅意的艺术粗陶花瓶，质地粗砺，黄昏光影..."
                 className="w-full rounded border border-sand-300 p-4 bg-sand-50 font-sans text-xs focus:outline-none focus:border-amber-800 text-charcoal resize-none"
               />
+            </div>
+
+            {/* Optional Sub-products Curation Collapsible */}
+            <div className="border border-sand-300 rounded overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setIsExpandSuggested(!isExpandSuggested)}
+                className="w-full flex items-center justify-between p-3.5 bg-sand-50 text-[10px] tracking-wider font-semibold text-charcoal uppercase focus:outline-none cursor-pointer border-b border-sand-300"
+              >
+                <span>Step 2.5: 搭配建议与小单品 (选填)</span>
+                <span className="text-gray-400 font-sans">{isExpandSuggested ? "▼ 收起" : "▲ 展开"}</span>
+              </button>
+              
+              {isExpandSuggested && (
+                <div className="p-4 bg-white space-y-4 animate-fade-in">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-semibold text-gray-500 uppercase">搭配单品一名称 / 描述</label>
+                    <input
+                      type="text"
+                      value={subProduct1}
+                      onChange={(e) => setSubProduct1(e.target.value)}
+                      placeholder="留空则由 AI 根据主展品进行脑暴（例如：粗木托盘）"
+                      className="w-full rounded border border-sand-300 px-3 py-2 bg-sand-50 font-sans text-xs focus:outline-none focus:border-amber-800 text-charcoal"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-semibold text-gray-500 uppercase">搭配单品二名称 / 描述</label>
+                    <input
+                      type="text"
+                      value={subProduct2}
+                      onChange={(e) => setSubProduct2(e.target.value)}
+                      placeholder="留空则由 AI 进行脑暴（例如：天然黄铜线香座）"
+                      className="w-full rounded border border-sand-300 px-3 py-2 bg-sand-50 font-sans text-xs focus:outline-none focus:border-amber-800 text-charcoal"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Style selector (Static Minimum Curation) */}

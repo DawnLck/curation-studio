@@ -28,6 +28,26 @@ const sendProgress = (curationId, step, status, message = "", extra = null) => {
   clients.forEach((res) => res.write(`data: ${data}\n\n`));
 };
 
+// 带有重试机制的安全 CLI 执行器 (防止 DashScope 429 并发节流限流)
+const runWithRetry = async (args, retries = 3, delayMs = 3000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await execFileAsync("bl", args);
+    } catch (err) {
+      const errMsg = err.message || "";
+      const errStderr = err.stderr || "";
+      const isRateLimit = errMsg.includes("Throttling") || errMsg.includes("429") || errStderr.includes("429") || errStderr.includes("RateQuota");
+      
+      if (isRateLimit && i < retries - 1) {
+        console.warn(`[Rate Limit] 触发百炼速率限制，正在进行第 ${i + 1} 次重试，等待 ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+};
+
 // SSE 状态监听端点
 app.get("/api/curate/progress/:id", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
@@ -46,6 +66,8 @@ app.get("/api/curate/progress/:id", (req, res) => {
 // 核心百炼生成流程
 app.post("/api/curate", upload.single("image"), async (req, res) => {
   const description = req.body.description || "";
+  const subProduct1Raw = req.body.subProduct1 || "";
+  const subProduct2Raw = req.body.subProduct2 || "";
   const curationId = `curation-${Date.now()}`;
   const targetDir = path.join(__dirname, "public", "assets", "generated", curationId);
   fs.mkdirSync(targetDir, { recursive: true });
@@ -67,7 +89,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       sendProgress(curationId, 1, "processing", "Qwen-VL 正在分析参考图视觉属性...");
       const describePrompt = "Describe the main product in this image in detail: shape, color, material, texture, labels, and text. Format the response as a single concise English paragraph, without any explanation.";
       try {
-        const describeResult = await execFileAsync("bl", [
+        const describeResult = await runWithRetry([
           "vision", "describe",
           "--image", sourceImagePath,
           "--prompt", describePrompt,
@@ -79,11 +101,53 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       }
     }
 
+    // Step 0.5: AI 创意搭配脑暴与提示词丰富化
+    let subProduct1Desc = "";
+    let subProduct2Desc = "";
+    let subProduct1Name = "";
+    let subProduct2Name = "";
+    
+    sendProgress(curationId, 1, "processing", "AI 创意搭配师脑暴搭配建议中...");
+    const brainPrompt = `你是一个顶级空间美学与电商摄影陈列大师。主单品是“${description}${productVisualDetails ? ` (外观细节: ${productVisualDetails})` : ''}”。
+我们想为其搭配两个小单品，放置在同一个极简、wabi-sabi风格的场景中。
+副商品一建议描述为：${subProduct1Raw || '由你自动脑暴一个最搭配且能够呼应材质色彩的单品'}。
+副商品二建议描述为：${subProduct2Raw || '由你自动脑暴第二个搭配单品'}。
+
+请为这两个副单品分别设计用于 AI 生图的英文视觉描述（包含器形、材质、色彩，以便送入图像生成器）。
+直接输出 JSON 格式（不要包含 markdown 标记），包含以下字段：
+{
+  "sub1Name": "副商品一中文简短名称",
+  "sub1Desc": "副商品一的英文视觉描述，用于生图 prompt",
+  "sub2Name": "副商品二中文简短名称",
+  "sub2Desc": "副商品二的英文视觉描述，用于生图 prompt"
+}`;
+
+    try {
+      const brainResult = await runWithRetry([
+        "text", "chat",
+        "--message", brainPrompt,
+        "--output", "text"
+      ]);
+      const rawBrainStdout = brainResult.stdout.trim();
+      const cleanedBrainJsonStr = rawBrainStdout.replace(/```json|```/g, "").trim();
+      const rawBrainJson = JSON.parse(cleanedBrainJsonStr);
+      subProduct1Name = rawBrainJson.sub1Name || "搭配单品一";
+      subProduct1Desc = rawBrainJson.sub1Desc || "a minimalist home accessory, wabi-sabi style";
+      subProduct2Name = rawBrainJson.sub2Name || "搭配单品二";
+      subProduct2Desc = rawBrainJson.sub2Desc || "a styled lifestyle item, elegant minimalist style";
+    } catch (err) {
+      console.error("AI Stylist brainstorm failed, using fallbacks", err);
+      subProduct1Name = subProduct1Raw || "置物盘";
+      subProduct1Desc = "a styled ceramic tray, minimalist and warm lighting";
+      subProduct2Name = subProduct2Raw || "香薰摆件";
+      subProduct2Desc = "linen fabric textile, warm neutral shades";
+    }
+
     // Step 1: 文案策划 (Qwen3.7-max)
     sendProgress(curationId, 1, "processing", "大语言模型策划商品文案中...");
-    const textPrompt = `写一篇关于商品描述“${description}${productVisualDetails ? `，其视觉特征为：${productVisualDetails}` : ''}”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
+    const textPrompt = `写一篇关于商品展示套系“主商品为：${description}${productVisualDetails ? `（视觉特征：${productVisualDetails}）` : ''}，搭配商品包括：${subProduct1Name}（${subProduct1Desc}）与${subProduct2Name}（${subProduct2Desc}）”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
     
-    const textResult = await execFileAsync("bl", [
+    const textResult = await runWithRetry([
       "text", "chat",
       "--message", textPrompt,
       "--output", "text"
@@ -97,24 +161,29 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     };
     sendProgress(curationId, 1, "processing", "大语言模型文案策划完成！", { editorial: curationText });
 
-    // Step 2: 意境商业图渲染 (Qwen-Image 2.0 并行生成3个不同分镜视角)
-    sendProgress(curationId, 2, "processing", "Qwen-Image 2.0 正在绘制 3 个不同视角的分镜大片...");
+    // Step 2: 意境商业图渲染 (Qwen-Image 2.0 顺序调用以防 Qps 限流)
+    sendProgress(curationId, 2, "processing", "Qwen-Image 2.0 正在绘制主分镜与副单品大片...");
     const imgOutDir = targetDir;
     
-    // 镜头 1：全景/中景意境图
+    // 主展品分镜提示词
     const imgPrompt1 = `A medium eye-level product shot of ${productVisualDetails || description}, quiet minimalist room, wabi-sabi concrete wall, warm evening light casting elegant leaf shadows, 35mm film photography, commercial product shot`;
-    // 镜头 2：特写细节图
     const imgPrompt2 = `An extreme close-up macro shot of ${productVisualDetails || description}, focusing on its intricate surface texture, material grains and craftsmanship details, clean neutral background, shallow depth of field, studio lighting`;
-    // 镜头 3：场景/使用图
     const imgPrompt3 = `A beautiful lifestyle shot of ${productVisualDetails || description} resting on a rustic wooden table, warm and cozy aesthetic, natural daylight, soft focus background, candid lifestyle photography`;
-
-    await Promise.all([
-      execFileAsync("bl", ["image", "generate", "--prompt", imgPrompt1, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_1"]),
-      execFileAsync("bl", ["image", "generate", "--prompt", imgPrompt2, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_2"]),
-      execFileAsync("bl", ["image", "generate", "--prompt", imgPrompt3, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_3"])
-    ]);
     
-    // 重命名下载的三张分镜图片
+    // 副单品及搭配合照提示词
+    const imgPromptSub1 = `A beautiful eye-level product shot of ${subProduct1Desc}, quiet minimalist wabi-sabi background, warm evening shadows, 35mm film photography`;
+    const imgPromptSub2 = `A beautiful eye-level product shot of ${subProduct2Desc}, quiet minimalist wabi-sabi background, warm evening shadows, 35mm film photography`;
+    const imgPromptEnsemble = `A professional styled lookbook shot showing the main product ${productVisualDetails || description} styled harmoniously together with ${subProduct1Desc} and ${subProduct2Desc} on a concrete table, soft afternoon sunlight casting shadows, 35mm film photography, minimalist wabi-sabi setup`;
+
+    // 采用顺序执行 + 智能重试，确保并发安全
+    await runWithRetry(["image", "generate", "--prompt", imgPrompt1, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_1"]);
+    await runWithRetry(["image", "generate", "--prompt", imgPrompt2, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_2"]);
+    await runWithRetry(["image", "generate", "--prompt", imgPrompt3, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_3"]);
+    await runWithRetry(["image", "generate", "--prompt", imgPromptSub1, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_1"]);
+    await runWithRetry(["image", "generate", "--prompt", imgPromptSub2, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_2"]);
+    await runWithRetry(["image", "generate", "--prompt", imgPromptEnsemble, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "ensemble"]);
+    
+    // 重命名下载的全部 6 张图片
     try {
       const files = fs.readdirSync(targetDir);
       for (let i = 1; i <= 3; i++) {
@@ -123,6 +192,14 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
           fs.renameSync(path.join(targetDir, file), path.join(targetDir, `hero_${i}.png`));
         }
       }
+      const sub1File = files.find(f => f.startsWith("sub_1_"));
+      if (sub1File) fs.renameSync(path.join(targetDir, sub1File), path.join(targetDir, "sub_1.png"));
+      
+      const sub2File = files.find(f => f.startsWith("sub_2_"));
+      if (sub2File) fs.renameSync(path.join(targetDir, sub2File), path.join(targetDir, "sub_2.png"));
+      
+      const ensembleFile = files.find(f => f.startsWith("ensemble_"));
+      if (ensembleFile) fs.renameSync(path.join(targetDir, ensembleFile), path.join(targetDir, "ensemble.png"));
     } catch (err) {
       console.error("Rename storyboard images failed", err);
     }
@@ -132,14 +209,23 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       `http://localhost:3001/assets/generated/${curationId}/hero_2.png`,
       `http://localhost:3001/assets/generated/${curationId}/hero_3.png`
     ];
-    sendProgress(curationId, 2, "processing", "分镜大片绘制完成！", { imagePaths: generatedImagePaths });
+    const generatedSub1Path = `http://localhost:3001/assets/generated/${curationId}/sub_1.png`;
+    const generatedSub2Path = `http://localhost:3001/assets/generated/${curationId}/sub_2.png`;
+    const generatedEnsemblePath = `http://localhost:3001/assets/generated/${curationId}/ensemble.png`;
+
+    sendProgress(curationId, 2, "processing", "大片与套系搭配图渲染完成！", { 
+      imagePaths: generatedImagePaths,
+      sub1Path: generatedSub1Path,
+      sub2Path: generatedSub2Path,
+      ensemblePath: generatedEnsemblePath
+    });
 
     // Step 3: 动态氛围视频生成 (HappyHorse 1.1)
     sendProgress(curationId, 3, "processing", "HappyHorse 1.1 正在生成 5 秒动态呼吸运镜视频...");
     const videoPrompt = `The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic`;
     
-    // 传入第一张生图（Establishing Shot）作为视频的起始分镜参考帧
-    await execFileAsync("bl", [
+    // 传入主商品第一张分镜作为视频的起始帧
+    await runWithRetry([
       "video", "generate",
       "--image", path.join(targetDir, "hero_1.png"),
       "--prompt", videoPrompt,
@@ -152,7 +238,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
 
     // Step 4: 旁白配音合成 (CosyVoice)
     sendProgress(curationId, 4, "processing", "CosyVoice 正在合成策展人配音旁白...");
-    await execFileAsync("bl", [
+    await runWithRetry([
       "speech", "synthesize",
       "--text", curationText.body,
       "--voice", "longwan_v3",
@@ -164,7 +250,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     // Step 5: 写入静态配置文件
     sendProgress(curationId, 5, "processing", "正在完成数据拼装与排版注入...");
     const finalJSON = {
-      productName: description.substring(0, 10) || "新品首发",
+      productName: description.substring(0, 10) || "主商品首发",
       subtitle: "自适应智能策展单品",
       theme: "quiet-minimal",
       editorial: curationText,
@@ -173,9 +259,27 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       voicePath: `http://localhost:3001/assets/generated/${curationId}/narration.mp3`,
       imagePrompts: [imgPrompt1, imgPrompt2, imgPrompt3],
       videoPrompt: videoPrompt,
+      subProducts: [
+        {
+          name: subProduct1Name,
+          desc: subProduct1Desc,
+          imagePath: generatedSub1Path,
+          prompt: imgPromptSub1
+        },
+        {
+          name: subProduct2Name,
+          desc: subProduct2Desc,
+          imagePath: generatedSub2Path,
+          prompt: imgPromptSub2
+        }
+      ],
+      ensemble: {
+        imagePath: generatedEnsemblePath,
+        prompt: imgPromptEnsemble
+      },
       features: [
-        { title: "自适应匹配", desc: "基于上传图片与百炼理解的视觉美学智能呈现" },
-        { title: "多模态覆盖", desc: "Qwen文案、Qwen-Image大片、HappyHorse视频与CosyVoice旁白完整生产" }
+        { title: "套系搭配", desc: `${subProduct1Name} 与 ${subProduct2Name} 空间连结` },
+        { title: "自适应对齐", desc: "基于主商品视觉特征自动或手动智能适配辅展品" }
       ]
     };
     fs.writeFileSync(path.join(targetDir, "curation-data.json"), JSON.stringify(finalJSON, null, 2));

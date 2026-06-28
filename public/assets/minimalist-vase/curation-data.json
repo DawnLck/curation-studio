@@ -19,6 +19,24 @@
     "A beautiful lifestyle shot of artistic ceramic vase resting on a rustic wooden table, warm and cozy aesthetic, natural daylight, soft focus background, candid lifestyle photography"
   ],
   "videoPrompt": "The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic",
+  "subProducts": [
+    {
+      "name": "亚麻粗织桌旗",
+      "desc": "以未染色有机粗织亚麻制成，留存原始褶皱与大地的温度",
+      "imagePath": "http://localhost:3001/assets/minimalist-vase/sub_1.png",
+      "prompt": "A beautiful eye-level product shot of organic raw linen runner fabric table runner with rough edges, neutral beige shades, minimalist wabi-sabi backdrop"
+    },
+    {
+      "name": "黄铜线香插",
+      "desc": "手工打磨的黄铜圆底，插着一缕静默上升的沉香烟气",
+      "imagePath": "http://localhost:3001/assets/minimalist-vase/sub_2.png",
+      "prompt": "A beautiful eye-level product shot of solid brass incense burner holding burning agarwood stick, thin white smoke rising, studio lighting, soft shadows"
+    }
+  ],
+  "ensemble": {
+    "imagePath": "http://localhost:3001/assets/minimalist-vase/ensemble.png",
+    "prompt": "A professional styled lookbook shot showing the ceramic vase styled harmoniously together with raw linen table runner and a solid brass incense burner on a concrete table, soft afternoon sunlight casting shadows, 35mm film photography, minimalist wabi-sabi setup"
+  },
   "features": [
     { "title": "手工拉坯", "desc": "粗砂陶泥，留存了手作匠人的天然力道与质感" },
     { "title": "光影雕刻", "desc": "瓶身磨砂亚光表层，完美承接日光折射的光影微澜" }

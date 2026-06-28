@@ -140,16 +140,92 @@ export const CurationGallery = ({ data, onReset }) => {
             <AudioNarration audioSrc={data.voicePath} />
           </div>
 
-          {/* Box 5: Features Detail */}
-          <div className="md:col-span-3 bg-white border border-sand-300 rounded-lg p-8 shadow-xs hover:shadow-md transition-shadow flex flex-col md:flex-row gap-8 justify-around items-start">
-            {data.features.map((feature, i) => (
-              <div key={i} className="flex-1">
-                <span className="text-[10px] font-sans tracking-wider text-amber-800 font-semibold uppercase">0{i+1} · 特征</span>
-                <h4 className="font-serif text-lg font-medium text-charcoal mt-2 mb-1">{feature.title}</h4>
-                <p className="text-xs text-gray-500 leading-relaxed">{feature.desc}</p>
+          {/* Box 5: Sub-product 1 Card (NEW) */}
+          {data.subProducts && data.subProducts[0] && (
+            <div className="bg-white border border-sand-300 rounded-lg overflow-hidden md:col-span-1 md:row-span-1 shadow-xs hover:shadow-md transition-shadow relative flex flex-col justify-between p-4 group">
+              <div className="w-full h-[120px] rounded overflow-hidden border border-sand-200 relative">
+                <img
+                  src={data.subProducts[0].imagePath}
+                  alt={data.subProducts[0].name}
+                  className="w-full h-full object-cover select-none pointer-events-none group-hover:scale-105 transition-transform duration-500"
+                />
+                <button
+                  onClick={() => setModalContent({ title: `辅单品 [${data.subProducts[0].name}] 生成提示词`, prompt: data.subProducts[0].prompt || "（未提供提示词）" })}
+                  className="absolute bottom-2 right-2 p-1 rounded-full bg-white/90 hover:bg-white text-gray-600 border border-sand-300 transition-colors cursor-pointer z-10"
+                >
+                  <Info size={10} />
+                </button>
               </div>
-            ))}
+              <div className="mt-2.5">
+                <span className="text-[7px] font-sans tracking-wider text-amber-800 font-bold uppercase">搭配单品一</span>
+                <h4 className="font-serif text-xs font-semibold text-charcoal truncate mt-0.5">{data.subProducts[0].name}</h4>
+                <p className="text-[9px] text-gray-500 font-sans truncate leading-relaxed mt-0.5">{data.subProducts[0].desc}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Box 6: Sub-product 2 Card (NEW) */}
+          {data.subProducts && data.subProducts[1] && (
+            <div className="bg-white border border-sand-300 rounded-lg overflow-hidden md:col-span-1 md:row-span-1 shadow-xs hover:shadow-md transition-shadow relative flex flex-col justify-between p-4 group">
+              <div className="w-full h-[120px] rounded overflow-hidden border border-sand-200 relative">
+                <img
+                  src={data.subProducts[1].imagePath}
+                  alt={data.subProducts[1].name}
+                  className="w-full h-full object-cover select-none pointer-events-none group-hover:scale-105 transition-transform duration-500"
+                />
+                <button
+                  onClick={() => setModalContent({ title: `辅单品 [${data.subProducts[1].name}] 生成提示词`, prompt: data.subProducts[1].prompt || "（未提供提示词）" })}
+                  className="absolute bottom-2 right-2 p-1 rounded-full bg-white/90 hover:bg-white text-gray-600 border border-sand-300 transition-colors cursor-pointer z-10"
+                >
+                  <Info size={10} />
+                </button>
+              </div>
+              <div className="mt-2.5">
+                <span className="text-[7px] font-sans tracking-wider text-amber-800 font-bold uppercase">搭配单品二</span>
+                <h4 className="font-serif text-xs font-semibold text-charcoal truncate mt-0.5">{data.subProducts[1].name}</h4>
+                <p className="text-[9px] text-gray-500 font-sans truncate leading-relaxed mt-0.5">{data.subProducts[1].desc}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Box 7: Curation Feature Description */}
+          <div className="bg-white border border-sand-300 rounded-lg p-6 md:col-span-1 md:row-span-1 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between">
+            <div>
+              <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">04 · 空间陈列特征</span>
+              <div className="space-y-3.5 mt-3">
+                {data.features.map((feature, i) => (
+                  <div key={i} className="border-l-2 border-sand-400 pl-3">
+                    <h5 className="font-serif text-xs font-semibold text-charcoal">{feature.title}</h5>
+                    <p className="text-[9px] text-gray-500 leading-relaxed mt-0.5">{feature.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="text-[8px] text-gray-400 font-sans italic border-t border-sand-200 pt-2 mt-2">
+              💡 基于空间色彩呼应算法陈列
+            </div>
           </div>
+
+          {/* Box 8: Ensemble Group Curation Banner (NEW) */}
+          {data.ensemble && (
+            <div className="bg-white border border-sand-300 rounded-lg overflow-hidden md:col-span-3 min-h-[280px] shadow-xs hover:shadow-md transition-shadow relative flex items-center justify-center group">
+              <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-xs border border-sand-300 px-3 py-1.5 text-[8px] uppercase tracking-wider text-gray-600 rounded z-10 font-sans font-semibold">
+                套系全景合影 / Ensemble Lookbook
+              </div>
+              <img
+                src={data.ensemble.imagePath}
+                alt="Ensemble Lookbook"
+                className="w-full h-full object-cover select-none pointer-events-none absolute inset-0 group-hover:scale-[1.02] transition-transform duration-700"
+              />
+              <button
+                onClick={() => setModalContent({ title: "套系搭配大片生成提示词 (Ensemble Prompt)", prompt: data.ensemble.prompt || "（未提供提示词）" })}
+                className="absolute bottom-4 right-4 p-2 rounded-full bg-white/90 hover:bg-white text-gray-600 border border-sand-300 transition-colors cursor-pointer z-10 shadow-xs"
+                title="查看套系提示词"
+              >
+                <Info size={14} />
+              </button>
+            </div>
+          )}
 
         </div>
 
