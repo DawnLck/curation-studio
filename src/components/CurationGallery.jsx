@@ -26,7 +26,6 @@ export const CurationGallery = ({ data, onReset }) => {
           <h1 className="font-serif text-4xl md:text-5xl font-light text-charcoal mt-3 mb-1">
             {data.productName}
           </h1>
-          <p className="text-sm font-sans italic text-gray-600">{data.subtitle}</p>
         </div>
 
         {/* Bento Grid */}
@@ -61,11 +60,11 @@ export const CurationGallery = ({ data, onReset }) => {
                     ))}
                   </div>
                 )}
-                {/* Info button */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setModalContent({ title: "分镜意境图生成提示词 (Image Prompt)", prompt: data.imagePrompt || "（未提供提示词数据）" });
+                    const activePrompt = data.imagePrompts ? data.imagePrompts[activeImageIdx] : (data.imagePrompt || "（未提供提示词数据）");
+                    setModalContent({ title: `分镜 ${activeImageIdx + 1} 意境图提示词 (Image Prompt)`, prompt: activePrompt });
                   }}
                   className="absolute bottom-4 right-4 p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-600 border border-sand-300 z-10 transition-colors cursor-pointer shadow-xs"
                   title="查看生图提示词"
