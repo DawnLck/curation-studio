@@ -63,7 +63,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     sendProgress(curationId, 1, "processing", "大语言模型策划商品文案中...");
     const textPrompt = `写一篇关于商品描述“${description}”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
     
-    const textResult = await execAsync(`bl text chat --prompt "${textPrompt}"`);
+    const textResult = await execAsync(`bl text chat --message "${textPrompt}"`);
     const curationText = JSON.parse(textResult.stdout.trim());
 
     // Step 2: 意境商业图渲染 (Qwen-Image 2.0)
