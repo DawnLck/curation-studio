@@ -64,7 +64,13 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     const textPrompt = `写一篇关于商品描述“${description}”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
     
     const textResult = await execAsync(`bl text chat --message "${textPrompt}"`);
-    const curationText = JSON.parse(textResult.stdout.trim());
+    const rawStdout = textResult.stdout.trim();
+    const cleanedJsonStr = rawStdout.replace(/```json|```/g, "").trim();
+    const rawJson = JSON.parse(cleanedJsonStr);
+    const curationText = {
+      headline: rawJson.headline || rawJson.Headline || rawJson.title || "静默新品",
+      body: rawJson.body || rawJson.Body || rawJson.content || ""
+    };
 
     // Step 2: 意境商业图渲染 (Qwen-Image 2.0)
     sendProgress(curationId, 2, "processing", "Qwen-Image 2.0 绘制产品商业大片中...");

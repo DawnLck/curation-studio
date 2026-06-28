@@ -41,10 +41,10 @@ export const CurationGallery = ({ data, onReset }) => {
             <div>
               <span className="text-[9px] font-sans tracking-[0.2em] text-amber-800 font-semibold uppercase">社论推荐 / Editorial</span>
               <h3 className="font-serif text-2xl font-normal text-charcoal mt-4 mb-4 leading-snug">
-                {data.editorial.headline}
+                {data.editorial?.headline || data.editorial?.Headline || data.editorial?.title || "静默新品"}
               </h3>
               <div className="text-xs leading-relaxed text-gray-600">
-                <TypeWriter text={data.editorial.body} speed={40} />
+                <TypeWriter text={data.editorial?.body || data.editorial?.Body || data.editorial?.content || ""} speed={40} />
               </div>
             </div>
             <div className="border-t border-sand-200 pt-4 text-[9px] text-gray-400 font-sans">

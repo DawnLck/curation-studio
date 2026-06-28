@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
-export const TypeWriter = ({ text, speed = 30, onComplete }) => {
+export const TypeWriter = ({ text = "", speed = 30, onComplete }) => {
   const [displayedText, setDisplayedText] = useState("");
   const [index, setIndex] = useState(0);
 
