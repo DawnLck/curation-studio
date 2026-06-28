@@ -134,6 +134,8 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       imagePaths: generatedImagePaths,
       videoPath: `http://localhost:3001/assets/generated/${curationId}/ambient.mp4`,
       voicePath: `http://localhost:3001/assets/generated/${curationId}/narration.mp3`,
+      imagePrompt: imgPrompt,
+      videoPrompt: videoPrompt,
       features: [
         { title: "自适应匹配", desc: "基于上传图片与百炼理解的视觉美学智能呈现" },
         { title: "多模态覆盖", desc: "Qwen文案、Qwen-Image大片、HappyHorse视频与CosyVoice旁白完整生产" }

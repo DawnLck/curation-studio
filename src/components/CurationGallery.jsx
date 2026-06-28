@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { ThreeDCard } from "./ThreeDCard";
 import { TypeWriter } from "./TypeWriter";
 import { AudioNarration } from "./AudioNarration";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
 
 export const CurationGallery = ({ data, onReset }) => {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [modalContent, setModalContent] = useState(null);
 
   return (
     <div className="w-full min-h-screen py-16 bg-sand-200">
@@ -60,6 +61,17 @@ export const CurationGallery = ({ data, onReset }) => {
                     ))}
                   </div>
                 )}
+                {/* Info button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setModalContent({ title: "分镜意境图生成提示词 (Image Prompt)", prompt: data.imagePrompt || "（未提供提示词数据）" });
+                  }}
+                  className="absolute bottom-4 right-4 p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-600 border border-sand-300 z-10 transition-colors cursor-pointer shadow-xs"
+                  title="查看生图提示词"
+                >
+                  <Info size={12} />
+                </button>
               </div>
             </ThreeDCard>
           </div>
@@ -85,7 +97,7 @@ export const CurationGallery = ({ data, onReset }) => {
             <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-xs border border-sand-300 px-2 py-0.5 text-[8px] uppercase tracking-wider text-gray-600 rounded z-10">
               HappyHorse 动态氛围 (5s)
             </div>
-            <video
+             <video
               src={data.videoPath}
               autoPlay
               loop
@@ -93,6 +105,14 @@ export const CurationGallery = ({ data, onReset }) => {
               playsInline
               className="w-full h-full object-cover"
             />
+            {/* Info button */}
+            <button
+              onClick={() => setModalContent({ title: "氛围动态视频生成提示词 (Video Prompt)", prompt: data.videoPrompt || "（未提供提示词数据）" })}
+              className="absolute bottom-3 right-3 p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-600 border border-sand-300 z-10 transition-colors cursor-pointer shadow-xs"
+              title="查看视频提示词"
+            >
+              <Info size={12} />
+            </button>
           </div>
 
           {/* Box 4: Audio Player (CosyVoice) */}
@@ -124,6 +144,35 @@ export const CurationGallery = ({ data, onReset }) => {
         </div>
 
       </div>
+
+      {/* Modal Popup */}
+      {modalContent && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-6"
+          onClick={() => setModalContent(null)}
+        >
+          <div 
+            className="w-full max-w-md bg-white border border-sand-300 rounded-lg p-6 shadow-md relative animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-serif text-base font-semibold text-charcoal border-b border-sand-200 pb-3 mb-4">
+              {modalContent.title}
+            </h3>
+            <p className="text-xs text-gray-600 leading-relaxed font-mono bg-sand-50 p-4 rounded border border-sand-300 break-words max-h-[250px] overflow-y-auto">
+              {modalContent.prompt}
+            </p>
+            <div className="text-right mt-6">
+              <button
+                onClick={() => setModalContent(null)}
+                className="px-4 py-2 rounded bg-charcoal hover:bg-amber-900 text-sand-100 text-[10px] font-sans tracking-wider uppercase cursor-pointer"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
