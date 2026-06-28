@@ -29,18 +29,27 @@ const sendProgress = (curationId, step, status, message = "", extra = null) => {
 };
 
 // 带有重试机制的安全 CLI 执行器 (防止 DashScope 429 并发节流限流)
-const runWithRetry = async (args, retries = 3, delayMs = 3000) => {
+const runWithRetry = async (args, retries = 4, delayMs = 3000) => {
   for (let i = 0; i < retries; i++) {
     try {
       return await execFileAsync("bl", args);
     } catch (err) {
       const errMsg = err.message || "";
       const errStderr = err.stderr || "";
-      const isRateLimit = errMsg.includes("Throttling") || errMsg.includes("429") || errStderr.includes("429") || errStderr.includes("RateQuota");
+      const isRateLimit = 
+        errMsg.includes("Throttling") || 
+        errMsg.includes("429") || 
+        errMsg.includes("rate limit exceeded") ||
+        errStderr.includes("429") || 
+        errStderr.includes("RateQuota") ||
+        errStderr.includes("rate limit exceeded");
       
       if (isRateLimit && i < retries - 1) {
-        console.warn(`[Rate Limit] 触发百炼速率限制，正在进行第 ${i + 1} 次重试，等待 ${delayMs}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        // 引入 1s ~ 4s 随机抖动 (Jitter) 避免并发请求重试时发生时间共振碰撞，并逐步增加重试时间
+        const jitter = Math.floor(Math.random() * 3000) + 1000;
+        const totalDelay = delayMs + jitter;
+        console.warn(`[Rate Limit] 触发百炼速率限制，正在进行第 ${i + 1}/${retries} 次重试，等待 ${totalDelay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, totalDelay));
         continue;
       }
       throw err;

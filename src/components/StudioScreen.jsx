@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, Upload, FileText, Cpu, Eye } from "lucide-react";
+import { Sparkles, Upload, FileText, Cpu, Eye, AlertTriangle } from "lucide-react";
 
 export const StudioScreen = ({ onGenerate }) => {
   const [text, setText] = useState("");
@@ -14,6 +14,7 @@ export const StudioScreen = ({ onGenerate }) => {
   const [progressLog, setProgressLog] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
   const [history, setHistory] = useState([]);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   // 实时展现生成中产物的数据状态
   const [curationProgressData, setCurationProgressData] = useState({
@@ -149,22 +150,19 @@ export const StudioScreen = ({ onGenerate }) => {
             onGenerate("real", curationId);
           } else if (progress.status === "failed") {
             eventSource.close();
-            setIsGenerating(false);
-            alert(progress.message);
+            setErrorMsg(progress.message || "策展任务执行失败。");
           }
         };
 
         eventSource.onerror = (err) => {
           console.error("SSE connection error", err);
           eventSource.close();
-          setIsGenerating(false);
-          alert("实时状态流中断，但后台生成仍将继续进行。");
+          setErrorMsg("连接发生网络中断，读取服务器实时状态失败。请检查后端后台服务。");
         };
 
       } catch (err) {
         console.error(err);
-        setIsGenerating(false);
-        alert(`发起生成失败: ${err.message}. 请检查后台 server.js 是否启动。`);
+        setErrorMsg(`发起生成失败: ${err.message}. 请确保后台 server.js 已启动。`);
       }
     }
   };
@@ -202,40 +200,66 @@ export const StudioScreen = ({ onGenerate }) => {
         {isGenerating ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start py-4">
             
-            {/* Left Column: Curation Progress Steps */}
+            {/* Left Column: Curation Progress Steps or Error Info */}
             <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="relative w-10 h-10 flex-shrink-0">
-                  <div className="absolute inset-0 rounded-full border-2 border-sand-300"></div>
-                  <div className="absolute inset-0 rounded-full border-2 border-t-amber-800 animate-spin"></div>
-                </div>
-                <div>
-                  <h3 className="font-serif text-base text-charcoal font-medium">
-                    {curationMode === "demo" ? "装载 Demo 预制件中..." : `百炼实时生产中 (步骤 ${currentStep}/5)`}
-                  </h3>
-                  <p className="text-[10px] text-gray-500 font-sans">{progressLog}</p>
-                </div>
-              </div>
-
-              {/* Steps Checklist */}
-              <div className="space-y-2.5 border-t border-sand-300 pt-6">
-                {[
-                  "文案策划 (Qwen3.7)",
-                  "意境渲染 & 搭配 (Qwen-Image)",
-                  "动态视频 (HappyHorse)",
-                  "声音旁白 (CosyVoice)",
-                  "数据拼装 (Bento Inject)"
-                ].map((stepName, i) => (
-                  <div key={i} className="flex items-center justify-between text-[11px] font-sans">
-                    <span className={currentStep > i ? 'text-amber-800 font-semibold' : 'text-gray-400'}>
-                      {i + 1}. {stepName}
-                    </span>
-                    <span className={currentStep > i ? 'text-amber-800 font-semibold' : 'text-gray-400'}>
-                      {currentStep > i + 1 ? "✓ 已完成" : currentStep === i + 1 ? "● 烘焙中" : "○ 等待中"}
-                    </span>
+              {errorMsg ? (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="flex items-center gap-3 text-red-800">
+                    <AlertTriangle size={24} className="flex-shrink-0 animate-pulse" />
+                    <div>
+                      <h3 className="font-serif text-sm font-semibold">策展任务异常中断</h3>
+                      <p className="text-[9px] text-gray-500 font-sans">遇到网络连接或 API 限流错误</p>
+                    </div>
                   </div>
-                ))}
-              </div>
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-[10px] p-4 rounded font-mono max-h-[180px] overflow-y-auto leading-relaxed break-all whitespace-pre-wrap select-text">
+                    {errorMsg}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setErrorMsg(null);
+                      setIsGenerating(false);
+                    }}
+                    className="w-full py-2.5 bg-charcoal hover:bg-red-950 text-white rounded text-[10px] font-sans tracking-wider uppercase cursor-pointer transition-colors shadow-xs"
+                  >
+                    返回调整策展参数
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-10 h-10 flex-shrink-0">
+                      <div className="absolute inset-0 rounded-full border-2 border-sand-300"></div>
+                      <div className="absolute inset-0 rounded-full border-2 border-t-amber-800 animate-spin"></div>
+                    </div>
+                    <div>
+                      <h3 className="font-serif text-base text-charcoal font-medium">
+                        {curationMode === "demo" ? "装载 Demo 预制件中..." : `百炼实时生产中 (步骤 ${currentStep}/5)`}
+                      </h3>
+                      <p className="text-[10px] text-gray-500 font-sans">{progressLog}</p>
+                    </div>
+                  </div>
+
+                  {/* Steps Checklist */}
+                  <div className="space-y-2.5 border-t border-sand-300 pt-6">
+                    {[
+                      "文案策划 (Qwen3.7)",
+                      "意境渲染 & 搭配 (Qwen-Image)",
+                      "动态视频 (HappyHorse)",
+                      "声音旁白 (CosyVoice)",
+                      "数据拼装 (Bento Inject)"
+                    ].map((stepName, i) => (
+                      <div key={i} className="flex items-center justify-between text-[11px] font-sans">
+                        <span className={currentStep > i ? 'text-amber-800 font-semibold' : 'text-gray-400'}>
+                          {i + 1}. {stepName}
+                        </span>
+                        <span className={currentStep > i ? 'text-amber-800 font-semibold' : 'text-gray-400'}>
+                          {currentStep > i + 1 ? "✓ 已完成" : currentStep === i + 1 ? "● 烘焙中" : "○ 等待中"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Right Column: Emerging Bento Assets Preview */}
