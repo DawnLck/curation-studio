@@ -12,6 +12,14 @@ export const StudioScreen = ({ onGenerate }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [history, setHistory] = useState([]);
 
+  // 实时展现生成中产物的数据状态
+  const [curationProgressData, setCurationProgressData] = useState({
+    editorial: null,
+    imagePath: null,
+    videoPath: null,
+    voicePath: null
+  });
+
   useEffect(() => {
     fetch("http://localhost:3001/api/curate/history")
       .then((res) => res.json())
@@ -30,15 +38,62 @@ export const StudioScreen = ({ onGenerate }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsGenerating(true);
+    setCurationProgressData({
+      editorial: null,
+      imagePath: null,
+      videoPath: null,
+      voicePath: null
+    });
 
     if (curationMode === "demo") {
-      // Demo 模式：直接模拟 2s 并返回预烘焙数据
+      // Demo 模式：模拟逐步释放生成资产
       setCurrentStep(1);
-      setProgressLog("正在加载预烘焙极简花瓶资产...");
+      setProgressLog("大语言模型策划商品文案中...");
+      
+      setTimeout(() => {
+        setCurrentStep(2);
+        setProgressLog("意境渲染图绘制中...");
+        setCurationProgressData(prev => ({
+          ...prev,
+          editorial: { 
+            headline: "静麦之器", 
+            body: "这款器物由粗砺黏土经窑火洗礼而成，表面保留了自然的砂粒感与火劫痕迹。柔和的光晕轻轻在其釉面流转，流溢出大音希声、大象无形的东方极简美学品味。" 
+          }
+        }));
+      }, 500);
+
+      setTimeout(() => {
+        setCurrentStep(3);
+        setProgressLog("氛围动态视频烘焙中...");
+        setCurationProgressData(prev => ({
+          ...prev,
+          imagePath: "/assets/minimalist-vase/hero.png"
+        }));
+      }, 1000);
+
+      setTimeout(() => {
+        setCurrentStep(4);
+        setProgressLog("声音旁白录音合成中...");
+        setCurationProgressData(prev => ({
+          ...prev,
+          videoPath: "/assets/minimalist-vase/ambient.mp4"
+        }));
+      }, 1500);
+
+      setTimeout(() => {
+        setCurrentStep(5);
+        setProgressLog("正在完成数据拼装与排版注入...");
+        setCurationProgressData(prev => ({
+          ...prev,
+          voicePath: "/assets/minimalist-vase/narration.mp3"
+        }));
+      }, 2000);
+
       setTimeout(() => {
         setIsGenerating(false);
         onGenerate("demo", null);
-      }, 2000);
+      }, 2500);
+
     } else {
       // Real 模式：真实发起上传并建立 SSE 通道
       try {
@@ -66,6 +121,13 @@ export const StudioScreen = ({ onGenerate }) => {
           setCurrentStep(progress.step);
           setProgressLog(progress.message);
 
+          if (progress.extra) {
+            setCurationProgressData(prev => ({
+              ...prev,
+              ...progress.extra
+            }));
+          }
+
           if (progress.status === "completed") {
             eventSource.close();
             setIsGenerating(false);
@@ -87,14 +149,14 @@ export const StudioScreen = ({ onGenerate }) => {
       } catch (err) {
         console.error(err);
         setIsGenerating(false);
-        alert(`发起生成失败: ${err.message}. 请检查后台 server.js (PORT 3001) 是否启动。`);
+        alert(`发起生成失败: ${err.message}. 请检查后台 server.js 是否启动。`);
       }
     }
   };
 
   return (
     <div className="w-full min-h-screen bg-sand-200 flex flex-col justify-center items-center py-12 px-6 grid-bg">
-      <div className="w-full max-w-xl bg-white border border-sand-300 rounded-lg p-10 shadow-xs hover:shadow-md transition-shadow animate-fade-in">
+      <div className={`w-full bg-white border border-sand-300 rounded-lg p-10 shadow-xs hover:shadow-md transition-all duration-500 ease-in-out ${isGenerating ? 'max-w-4xl' : 'max-w-xl'}`}>
         
         <div className="text-center mb-8">
           <span className="text-[10px] font-sans tracking-[0.3em] text-gray-500 uppercase">AI Curation Studio</span>
@@ -103,43 +165,51 @@ export const StudioScreen = ({ onGenerate }) => {
         </div>
 
         {/* Mode Switcher */}
-        <div className="flex gap-4 p-1.5 bg-sand-100 rounded-lg border border-sand-300 mb-6">
-          <button
-            type="button"
-            onClick={() => setCurationMode("demo")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded text-xs font-sans font-semibold transition-colors cursor-pointer ${curationMode === "demo" ? 'bg-white text-charcoal shadow-xs' : 'text-gray-500 hover:text-charcoal'}`}
-          >
-            <Eye size={14} /> Demo 体验 (免等)
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurationMode("real")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded text-xs font-sans font-semibold transition-colors cursor-pointer ${curationMode === "real" ? 'bg-white text-charcoal shadow-xs' : 'text-gray-500 hover:text-charcoal'}`}
-          >
-            <Cpu size={14} /> Real 引擎 (百炼实时)
-          </button>
-        </div>
+        {!isGenerating && (
+          <div className="flex gap-4 p-1.5 bg-sand-100 rounded-lg border border-sand-300 mb-6">
+            <button
+              type="button"
+              onClick={() => setCurationMode("demo")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded text-xs font-sans font-semibold transition-colors cursor-pointer ${curationMode === "demo" ? 'bg-white text-charcoal shadow-xs' : 'text-gray-500 hover:text-charcoal'}`}
+            >
+              <Eye size={14} /> Demo 体验 (免等)
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurationMode("real")}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded text-xs font-sans font-semibold transition-colors cursor-pointer ${curationMode === "real" ? 'bg-white text-charcoal shadow-xs' : 'text-gray-500 hover:text-charcoal'}`}
+            >
+              <Cpu size={14} /> Real 引擎 (百炼实时)
+            </button>
+          </div>
+        )}
 
         {isGenerating ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <div className="relative w-16 h-16">
-              <div className="absolute inset-0 rounded-full border-4 border-sand-300"></div>
-              <div className="absolute inset-0 rounded-full border-4 border-t-amber-800 animate-spin"></div>
-            </div>
-            <h3 className="font-serif text-lg text-charcoal mt-8 mb-2">
-              {curationMode === "demo" ? "装载预制件中..." : `百炼实时生产中 (步骤 ${currentStep}/5)`}
-            </h3>
-            <p className="text-xs text-gray-500 font-sans text-center max-w-xs">{progressLog}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start py-4">
+            
+            {/* Left Column: Curation Progress Steps */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="relative w-10 h-10 flex-shrink-0">
+                  <div className="absolute inset-0 rounded-full border-2 border-sand-300"></div>
+                  <div className="absolute inset-0 rounded-full border-2 border-t-amber-800 animate-spin"></div>
+                </div>
+                <div>
+                  <h3 className="font-serif text-base text-charcoal font-medium">
+                    {curationMode === "demo" ? "装载 Demo 预制件中..." : `百炼实时生产中 (步骤 ${currentStep}/5)`}
+                  </h3>
+                  <p className="text-[10px] text-gray-500 font-sans">{progressLog}</p>
+                </div>
+              </div>
 
-            {/* Steps Progress Visualizer */}
-            {curationMode === "real" && (
-              <div className="w-full mt-8 space-y-2 border-t border-sand-300 pt-6">
+              {/* Steps Checklist */}
+              <div className="space-y-2.5 border-t border-sand-300 pt-6">
                 {[
                   "文案策划 (Qwen3.7)",
                   "意境渲染 (Qwen-Image)",
                   "动态视频 (HappyHorse)",
                   "声音旁白 (CosyVoice)",
-                  "拼装排版 (Bento Inject)"
+                  "数据拼装 (Bento Inject)"
                 ].map((stepName, i) => (
                   <div key={i} className="flex items-center justify-between text-[11px] font-sans">
                     <span className={currentStep > i ? 'text-amber-800 font-semibold' : 'text-gray-400'}>
@@ -151,7 +221,64 @@ export const StudioScreen = ({ onGenerate }) => {
                   </div>
                 ))}
               </div>
-            )}
+            </div>
+
+            {/* Right Column: Emerging Bento Assets Preview */}
+            <div className="border border-sand-300 rounded-lg p-6 bg-sand-50 min-h-[300px] flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-2 right-2 text-[8px] tracking-wider text-gray-400 uppercase font-sans">
+                Emerging Curation Preview
+              </div>
+
+              <div className="space-y-4">
+                {/* 1. Text Preview */}
+                {curationProgressData.editorial && (
+                  <div className="animate-fade-in space-y-1 pb-3 border-b border-sand-200">
+                    <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">01 · 策展广告词</span>
+                    <h4 className="font-serif text-sm font-semibold text-charcoal">
+                      {curationProgressData.editorial.headline}
+                    </h4>
+                    <p className="text-[10px] leading-relaxed text-gray-500 mt-1">
+                      {curationProgressData.editorial.body}
+                    </p>
+                  </div>
+                )}
+
+                {/* 2. Image Preview */}
+                {curationProgressData.imagePath && (
+                  <div className="animate-fade-in space-y-1 pb-3 border-b border-sand-200">
+                    <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">02 · 视觉大片</span>
+                    <div className="w-full h-[120px] rounded overflow-hidden border border-sand-300">
+                      <img src={curationProgressData.imagePath} alt="Emerging Image" className="w-full h-full object-cover" />
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Video Preview */}
+                {curationProgressData.videoPath && (
+                  <div className="animate-fade-in space-y-1 pb-3 border-b border-sand-200">
+                    <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">03 · 氛围视频</span>
+                    <div className="w-full h-[120px] rounded overflow-hidden border border-sand-300">
+                      <video src={curationProgressData.videoPath} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Voice Preview */}
+                {curationProgressData.voicePath && (
+                  <div className="animate-fade-in flex items-center gap-2 bg-white border border-sand-300 p-2 rounded text-[10px] text-gray-600 font-sans">
+                    <span className="inline-block w-2 h-2 rounded-full bg-amber-800 animate-ping" />
+                    <span>策展人沉浸式旁白音频已就绪</span>
+                  </div>
+                )}
+              </div>
+
+              {!curationProgressData.editorial && (
+                <div className="flex-grow flex items-center justify-center text-[10px] text-gray-400 font-sans italic py-12">
+                  等待第一步文案生成完成...
+                </div>
+              )}
+            </div>
+
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
