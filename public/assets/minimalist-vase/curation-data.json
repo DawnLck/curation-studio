@@ -2,23 +2,71 @@
   "productName": "静默之瓶 (Quietude Vase)",
   "subtitle": "手工粗陶艺术单品",
   "theme": "quiet-minimal",
-  "editorial": {
-    "headline": "静默，是物体的呼吸。",
-    "body": "让产品不再是单纯的货架，而是一个空间的注脚。这款手工陶瓷花瓶以泥土的原始颗粒感与无序的物理波纹，静默地诉说着慢时光的故事。在黄昏折射的余晖中，它安放了空间的温度。"
+  "activeVersions": {
+    "editorial": 0,
+    "hero_1": 0,
+    "hero_2": 0,
+    "hero_3": 0,
+    "subProduct1": 0,
+    "subProduct2": 0,
+    "ensemble": 0,
+    "video": 0
   },
-  "voicePath": "http://localhost:3001/assets/minimalist-vase/narration.mp3",
-  "videoPath": "http://localhost:3001/assets/minimalist-vase/ambient.mp4",
-  "imagePaths": [
-    "http://localhost:3001/assets/minimalist-vase/hero_1.png",
-    "http://localhost:3001/assets/minimalist-vase/hero_2.png",
-    "http://localhost:3001/assets/minimalist-vase/hero_3.png"
-  ],
-  "imagePrompts": [
-    "A medium eye-level shot of artistic ceramic vase, quiet minimalist room, wabi-sabi concrete wall, warm evening light casting elegant leaf shadows, 35mm film photography, commercial product shot",
-    "An extreme close-up macro shot of artistic ceramic vase, focusing on its intricate surface texture, material grains and craftsmanship details, clean neutral background, shallow depth of field, studio lighting",
-    "A beautiful lifestyle shot of artistic ceramic vase resting on a rustic wooden table, warm and cozy aesthetic, natural daylight, soft focus background, candid lifestyle photography"
-  ],
-  "videoPrompt": "The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic",
+  "history": {
+    "editorial": [
+      {
+        "headline": "静默，是物体的呼吸。",
+        "body": "让产品不再是单纯的货架，而是一个空间的注脚。这款手工陶瓷花瓶以泥土的原始颗粒感与无序的物理波纹，静默地诉说着慢时光的故事。在黄昏折射的余晖中，它安放了空间的温度。",
+        "voicePath": "http://localhost:3001/assets/minimalist-vase/narration.mp3"
+      }
+    ],
+    "hero_1": [
+      {
+        "imagePath": "http://localhost:3001/assets/minimalist-vase/hero_1.png",
+        "prompt": "A medium eye-level shot of artistic ceramic vase, quiet minimalist room, wabi-sabi concrete wall, warm evening light casting elegant leaf shadows, 35mm film photography, commercial product shot"
+      }
+    ],
+    "hero_2": [
+      {
+        "imagePath": "http://localhost:3001/assets/minimalist-vase/hero_2.png",
+        "prompt": "An extreme close-up macro shot of artistic ceramic vase, focusing on its intricate surface texture, material grains and craftsmanship details, clean neutral background, shallow depth of field, studio lighting"
+      }
+    ],
+    "hero_3": [
+      {
+        "imagePath": "http://localhost:3001/assets/minimalist-vase/hero_3.png",
+        "prompt": "A beautiful lifestyle shot of artistic ceramic vase resting on a rustic wooden table, warm and cozy aesthetic, natural daylight, soft focus background, candid lifestyle photography"
+      }
+    ],
+    "subProduct1": [
+      {
+        "name": "亚麻粗织桌旗",
+        "desc": "以未染色有机粗织亚麻制成，留存原始褶皱与大地的温度",
+        "imagePath": "http://localhost:3001/assets/minimalist-vase/sub_1.png",
+        "prompt": "A beautiful eye-level product shot of organic raw linen runner fabric table runner with rough edges, neutral beige shades, minimalist wabi-sabi backdrop"
+      }
+    ],
+    "subProduct2": [
+      {
+        "name": "黄铜线香插",
+        "desc": "手工打磨的黄铜圆底，插着一缕静默上升的沉香烟气",
+        "imagePath": "http://localhost:3001/assets/minimalist-vase/sub_2.png",
+        "prompt": "A beautiful eye-level product shot of solid brass incense burner holding burning agarwood stick, thin white smoke rising, studio lighting, soft shadows"
+      }
+    ],
+    "ensemble": [
+      {
+        "imagePath": "http://localhost:3001/assets/minimalist-vase/ensemble.png",
+        "prompt": "A professional styled lookbook shot showing the ceramic vase styled harmoniously together with raw linen table runner and a solid brass incense burner on a concrete table, soft afternoon sunlight casting shadows, 35mm film photography, minimalist wabi-sabi setup"
+      }
+    ],
+    "video": [
+      {
+        "videoPath": "http://localhost:3001/assets/minimalist-vase/ambient.mp4",
+        "prompt": "The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic"
+      }
+    ]
+  },
   "features": [
     { "title": "手工拉坯", "desc": "粗砂陶泥，留存了手作匠人的天然力道与质感" },
     { "title": "光影雕刻", "desc": "瓶身磨砂亚光表层，完美承接日光折射的光影微澜" }

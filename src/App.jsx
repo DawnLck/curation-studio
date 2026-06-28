@@ -49,7 +49,7 @@ function App() {
       ) : (
         curationData ? (
           <TracingBeam>
-            <CurationGallery data={curationData} onReset={handleReset} />
+            <CurationGallery data={curationData} onReset={handleReset} loadPath={loadPath} onUpdateCurationData={setCurationData} />
           </TracingBeam>
         ) : (
           <div className="w-full min-h-screen flex items-center justify-center font-serif text-charcoal">

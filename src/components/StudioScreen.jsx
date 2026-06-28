@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, Upload, FileText, Cpu, Eye } from "lucide-react";
+import { Sparkles, Upload, FileText, Cpu, Eye, AlertTriangle } from "lucide-react";
 
 export const StudioScreen = ({ onGenerate }) => {
   const [text, setText] = useState("");
+  const [subProduct1, setSubProduct1] = useState("");
+  const [subProduct2, setSubProduct2] = useState("");
+  const [isExpandSuggested, setIsExpandSuggested] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   
@@ -11,11 +14,15 @@ export const StudioScreen = ({ onGenerate }) => {
   const [progressLog, setProgressLog] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
   const [history, setHistory] = useState([]);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   // 实时展现生成中产物的数据状态
   const [curationProgressData, setCurationProgressData] = useState({
     editorial: null,
-    imagePath: null,
+    imagePaths: null,
+    sub1Path: null,
+    sub2Path: null,
+    ensemblePath: null,
     videoPath: null,
     voicePath: null
   });
@@ -71,7 +78,10 @@ export const StudioScreen = ({ onGenerate }) => {
             "/assets/minimalist-vase/hero_1.png",
             "/assets/minimalist-vase/hero_2.png",
             "/assets/minimalist-vase/hero_3.png"
-          ]
+          ],
+          sub1Path: "/assets/minimalist-vase/sub_1.png",
+          sub2Path: "/assets/minimalist-vase/sub_2.png",
+          ensemblePath: "/assets/minimalist-vase/ensemble.png"
         }));
       }, 1000);
 
@@ -103,6 +113,8 @@ export const StudioScreen = ({ onGenerate }) => {
       try {
         const formData = new FormData();
         formData.append("description", text);
+        formData.append("subProduct1", subProduct1);
+        formData.append("subProduct2", subProduct2);
         if (imageFile) {
           formData.append("image", imageFile);
         }
@@ -138,22 +150,19 @@ export const StudioScreen = ({ onGenerate }) => {
             onGenerate("real", curationId);
           } else if (progress.status === "failed") {
             eventSource.close();
-            setIsGenerating(false);
-            alert(progress.message);
+            setErrorMsg(progress.message || "策展任务执行失败。");
           }
         };
 
         eventSource.onerror = (err) => {
           console.error("SSE connection error", err);
           eventSource.close();
-          setIsGenerating(false);
-          alert("实时状态流中断，但后台生成仍将继续进行。");
+          setErrorMsg("连接发生网络中断，读取服务器实时状态失败。请检查后端后台服务。");
         };
 
       } catch (err) {
         console.error(err);
-        setIsGenerating(false);
-        alert(`发起生成失败: ${err.message}. 请检查后台 server.js 是否启动。`);
+        setErrorMsg(`发起生成失败: ${err.message}. 请确保后台 server.js 已启动。`);
       }
     }
   };
@@ -191,40 +200,66 @@ export const StudioScreen = ({ onGenerate }) => {
         {isGenerating ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start py-4">
             
-            {/* Left Column: Curation Progress Steps */}
+            {/* Left Column: Curation Progress Steps or Error Info */}
             <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="relative w-10 h-10 flex-shrink-0">
-                  <div className="absolute inset-0 rounded-full border-2 border-sand-300"></div>
-                  <div className="absolute inset-0 rounded-full border-2 border-t-amber-800 animate-spin"></div>
-                </div>
-                <div>
-                  <h3 className="font-serif text-base text-charcoal font-medium">
-                    {curationMode === "demo" ? "装载 Demo 预制件中..." : `百炼实时生产中 (步骤 ${currentStep}/5)`}
-                  </h3>
-                  <p className="text-[10px] text-gray-500 font-sans">{progressLog}</p>
-                </div>
-              </div>
-
-              {/* Steps Checklist */}
-              <div className="space-y-2.5 border-t border-sand-300 pt-6">
-                {[
-                  "文案策划 (Qwen3.7)",
-                  "意境渲染 (Qwen-Image)",
-                  "动态视频 (HappyHorse)",
-                  "声音旁白 (CosyVoice)",
-                  "数据拼装 (Bento Inject)"
-                ].map((stepName, i) => (
-                  <div key={i} className="flex items-center justify-between text-[11px] font-sans">
-                    <span className={currentStep > i ? 'text-amber-800 font-semibold' : 'text-gray-400'}>
-                      {i + 1}. {stepName}
-                    </span>
-                    <span className={currentStep > i ? 'text-amber-800 font-semibold' : 'text-gray-400'}>
-                      {currentStep > i + 1 ? "✓ 已完成" : currentStep === i + 1 ? "● 烘焙中" : "○ 等待中"}
-                    </span>
+              {errorMsg ? (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="flex items-center gap-3 text-red-800">
+                    <AlertTriangle size={24} className="flex-shrink-0 animate-pulse" />
+                    <div>
+                      <h3 className="font-serif text-sm font-semibold">策展任务异常中断</h3>
+                      <p className="text-[9px] text-gray-500 font-sans">遇到网络连接或 API 限流错误</p>
+                    </div>
                   </div>
-                ))}
-              </div>
+                  <div className="bg-red-50 border border-red-200 text-red-700 text-[10px] p-4 rounded font-mono max-h-[180px] overflow-y-auto leading-relaxed break-all whitespace-pre-wrap select-text">
+                    {errorMsg}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setErrorMsg(null);
+                      setIsGenerating(false);
+                    }}
+                    className="w-full py-2.5 bg-charcoal hover:bg-red-950 text-white rounded text-[10px] font-sans tracking-wider uppercase cursor-pointer transition-colors shadow-xs"
+                  >
+                    返回调整策展参数
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-10 h-10 flex-shrink-0">
+                      <div className="absolute inset-0 rounded-full border-2 border-sand-300"></div>
+                      <div className="absolute inset-0 rounded-full border-2 border-t-amber-800 animate-spin"></div>
+                    </div>
+                    <div>
+                      <h3 className="font-serif text-base text-charcoal font-medium">
+                        {curationMode === "demo" ? "装载 Demo 预制件中..." : `百炼实时生产中 (步骤 ${currentStep}/5)`}
+                      </h3>
+                      <p className="text-[10px] text-gray-500 font-sans">{progressLog}</p>
+                    </div>
+                  </div>
+
+                  {/* Steps Checklist */}
+                  <div className="space-y-2.5 border-t border-sand-300 pt-6">
+                    {[
+                      "文案策划 (Qwen3.7)",
+                      "意境渲染 & 搭配 (Qwen-Image)",
+                      "动态视频 (HappyHorse)",
+                      "声音旁白 (CosyVoice)",
+                      "数据拼装 (Bento Inject)"
+                    ].map((stepName, i) => (
+                      <div key={i} className="flex items-center justify-between text-[11px] font-sans">
+                        <span className={currentStep > i ? 'text-amber-800 font-semibold' : 'text-gray-400'}>
+                          {i + 1}. {stepName}
+                        </span>
+                        <span className={currentStep > i ? 'text-amber-800 font-semibold' : 'text-gray-400'}>
+                          {currentStep > i + 1 ? "✓ 已完成" : currentStep === i + 1 ? "● 烘焙中" : "○ 等待中"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Right Column: Emerging Bento Assets Preview */}
@@ -247,23 +282,52 @@ export const StudioScreen = ({ onGenerate }) => {
                   </div>
                 )}
 
-                {/* 2. Image Preview (Supports 3 Storyboards) */}
+                {/* 2. Image Preview (Supports 3 Storyboards + 2 Subs + 1 Ensemble) */}
                 {(curationProgressData.imagePaths || curationProgressData.imagePath) && (
-                  <div className="animate-fade-in space-y-1 pb-3 border-b border-sand-200">
-                    <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">02 · 意境大片分镜 (3张)</span>
-                    <div className="grid grid-cols-3 gap-2">
-                      {curationProgressData.imagePaths ? (
-                        curationProgressData.imagePaths.map((path, idx) => (
-                          <div key={idx} className="w-full h-[65px] rounded overflow-hidden border border-sand-300">
-                            <img src={path} alt={`Storyboard ${idx+1}`} className="w-full h-full object-cover animate-fade-in" />
+                  <div className="animate-fade-in space-y-3.5 pb-3 border-b border-sand-200">
+                    <div>
+                      <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">02 · 意境大片分镜 (3张)</span>
+                      <div className="grid grid-cols-3 gap-2 mt-1">
+                        {curationProgressData.imagePaths ? (
+                          curationProgressData.imagePaths.map((path, idx) => (
+                            <div key={idx} className="w-full h-[60px] rounded overflow-hidden border border-sand-300">
+                              <img src={path} alt={`Storyboard ${idx+1}`} className="w-full h-full object-cover animate-fade-in" />
+                            </div>
+                          ))
+                        ) : (
+                          <div className="col-span-3 w-full h-[120px] rounded overflow-hidden border border-sand-300">
+                            <img src={curationProgressData.imagePath} alt="Emerging Image" className="w-full h-full object-cover" />
                           </div>
-                        ))
-                      ) : (
-                        <div className="col-span-3 w-full h-[120px] rounded overflow-hidden border border-sand-300">
-                          <img src={curationProgressData.imagePath} alt="Emerging Image" className="w-full h-full object-cover" />
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
+
+                    {/* Sub-products & Ensemble emerging thumbnails */}
+                    {(curationProgressData.sub1Path || curationProgressData.sub2Path || curationProgressData.ensemblePath) && (
+                      <div className="animate-fade-in pt-2 border-t border-dashed border-sand-200">
+                        <span className="text-[8px] font-sans tracking-wider text-amber-800 font-bold uppercase">02.5 · 搭配辅单品与全景LOOKBOOK</span>
+                        <div className="grid grid-cols-3 gap-2 mt-1">
+                          {curationProgressData.sub1Path && (
+                            <div className="w-full h-[60px] rounded overflow-hidden border border-sand-300 relative group">
+                              <img src={curationProgressData.sub1Path} alt="Sub 1" className="w-full h-full object-cover animate-fade-in" />
+                              <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[7px] text-white text-center py-0.5 font-sans truncate">辅件一</div>
+                            </div>
+                          )}
+                          {curationProgressData.sub2Path && (
+                            <div className="w-full h-[60px] rounded overflow-hidden border border-sand-300 relative group">
+                              <img src={curationProgressData.sub2Path} alt="Sub 2" className="w-full h-full object-cover animate-fade-in" />
+                              <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[7px] text-white text-center py-0.5 font-sans truncate">辅件二</div>
+                            </div>
+                          )}
+                          {curationProgressData.ensemblePath && (
+                            <div className="w-full h-[60px] rounded overflow-hidden border border-sand-300 relative group">
+                              <img src={curationProgressData.ensemblePath} alt="Ensemble" className="w-full h-full object-cover animate-fade-in" />
+                              <div className="absolute bottom-0 inset-x-0 bg-black/60 text-[7px] text-white text-center py-0.5 font-sans truncate">套系合照</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -329,6 +393,43 @@ export const StudioScreen = ({ onGenerate }) => {
                 placeholder="例如：一款具有东方禅意的艺术粗陶花瓶，质地粗砺，黄昏光影..."
                 className="w-full rounded border border-sand-300 p-4 bg-sand-50 font-sans text-xs focus:outline-none focus:border-amber-800 text-charcoal resize-none"
               />
+            </div>
+
+            {/* Optional Sub-products Curation Collapsible */}
+            <div className="border border-sand-300 rounded overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setIsExpandSuggested(!isExpandSuggested)}
+                className="w-full flex items-center justify-between p-3.5 bg-sand-50 text-[10px] tracking-wider font-semibold text-charcoal uppercase focus:outline-none cursor-pointer border-b border-sand-300"
+              >
+                <span>Step 2.5: 搭配建议与小单品 (选填)</span>
+                <span className="text-gray-400 font-sans">{isExpandSuggested ? "▼ 收起" : "▲ 展开"}</span>
+              </button>
+              
+              {isExpandSuggested && (
+                <div className="p-4 bg-white space-y-4 animate-fade-in">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-semibold text-gray-500 uppercase">搭配单品一名称 / 描述</label>
+                    <input
+                      type="text"
+                      value={subProduct1}
+                      onChange={(e) => setSubProduct1(e.target.value)}
+                      placeholder="留空则由 AI 根据主展品进行脑暴（例如：粗木托盘）"
+                      className="w-full rounded border border-sand-300 px-3 py-2 bg-sand-50 font-sans text-xs focus:outline-none focus:border-amber-800 text-charcoal"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-semibold text-gray-500 uppercase">搭配单品二名称 / 描述</label>
+                    <input
+                      type="text"
+                      value={subProduct2}
+                      onChange={(e) => setSubProduct2(e.target.value)}
+                      placeholder="留空则由 AI 进行脑暴（例如：天然黄铜线香座）"
+                      className="w-full rounded border border-sand-300 px-3 py-2 bg-sand-50 font-sans text-xs focus:outline-none focus:border-amber-800 text-charcoal"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Style selector (Static Minimum Curation) */}
