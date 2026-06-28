@@ -1,0 +1,122 @@
+import express from "express";
+import cors from "cors";
+import multer from "multer";
+import { exec } from "child_process";
+import { promisify } from "util";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const execAsync = promisify(exec);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// 配置 Multer 文件上传
+const upload = multer({ dest: "uploads/" });
+
+// 内存中保存各任务的 SSE 状态推送管道
+const activeClients = {};
+
+const sendProgress = (curationId, step, status, message = "") => {
+  const clients = activeClients[curationId] || [];
+  const data = JSON.stringify({ step, status, message });
+  clients.forEach((res) => res.write(`data: ${data}\n\n`));
+};
+
+// SSE 状态监听端点
+app.get("/api/curate/progress/:id", (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const id = req.params.id;
+  if (!activeClients[id]) activeClients[id] = [];
+  activeClients[id].push(res);
+
+  req.on("close", () => {
+    activeClients[id] = activeClients[id].filter((c) => c !== res);
+  });
+});
+
+// 核心百炼生成流程
+app.post("/api/curate", upload.single("image"), async (req, res) => {
+  const description = req.body.description || "";
+  const curationId = `curation-${Date.now()}`;
+  const targetDir = path.join(__dirname, "public", "assets", "generated", curationId);
+  fs.mkdirSync(targetDir, { recursive: true });
+
+  // 立即返回 ID
+  res.json({ id: curationId });
+
+  try {
+    // 拷贝上传的源图到目标目录
+    let sourceImagePath = "";
+    if (req.file) {
+      sourceImagePath = path.join(targetDir, "input.png");
+      fs.renameSync(req.file.path, sourceImagePath);
+    }
+
+    // Step 1: 文案策划 (Qwen3.7-max)
+    sendProgress(curationId, 1, "processing", "大语言模型策划商品文案中...");
+    const textPrompt = `写一篇关于商品描述“${description}”的极简杂志广告短文。输出JSON格式，含有两个字段：headline（字数在10字以内的情感标题）, body（80字左右的情感解说正文）。直接输出JSON字符串，不要包含markdown标记。`;
+    
+    const textResult = await execAsync(`bl text chat --prompt "${textPrompt}"`);
+    const curationText = JSON.parse(textResult.stdout.trim());
+
+    // Step 2: 意境商业图渲染 (Qwen-Image 2.0)
+    sendProgress(curationId, 2, "processing", "Qwen-Image 2.0 绘制产品商业大片中...");
+    const imgPrompt = `${description}, elegant minimalism, wabi-sabi background, warm evening sunlight, shot on 35mm film, award-winning photography style`;
+    const imgOutDir = targetDir;
+    
+    await execAsync(`bl image generate --prompt "${imgPrompt}" --size 4:3 --watermark false --out-dir "${imgOutDir}" --out-prefix hero`);
+    
+    // 重命名下载的图片为 hero.png
+    try {
+      const files = fs.readdirSync(targetDir);
+      const heroFile = files.find(f => f.startsWith("hero_") || f.startsWith("image_"));
+      if (heroFile) fs.renameSync(path.join(targetDir, heroFile), path.join(targetDir, "hero.png"));
+    } catch (err) {
+      console.error("Rename image failed", err);
+    }
+
+    // Step 3: 动态氛围视频生成 (HappyHorse 1.1)
+    sendProgress(curationId, 3, "processing", "HappyHorse 1.1 正在生成 5 秒动态呼吸运镜视频...");
+    const videoPrompt = `The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic`;
+    
+    await execAsync(`bl video generate --image "${path.join(targetDir, "hero.png")}" --prompt "${videoPrompt}" --resolution 720P --duration 5 --watermark false --download "${path.join(targetDir, "ambient.mp4")}"`);
+
+    // Step 4: 旁白配音合成 (CosyVoice)
+    sendProgress(curationId, 4, "processing", "CosyVoice 正在合成策展人配音旁白...");
+    await execAsync(`bl speech synthesize --text "${curationText.body}" --voice longwan_v3 --language zh --out "${path.join(targetDir, "narration.mp3")}"`);
+
+    // Step 5: 写入静态配置文件
+    sendProgress(curationId, 5, "processing", "正在完成数据拼装与排版注入...");
+    const finalJSON = {
+      productName: description.substring(0, 10) || "新品首发",
+      subtitle: "自适应智能策展单品",
+      theme: "quiet-minimal",
+      editorial: curationText,
+      imagePath: `/assets/generated/${curationId}/hero.png`,
+      videoPath: `/assets/generated/${curationId}/ambient.mp4`,
+      voicePath: `/assets/generated/${curationId}/narration.mp3`,
+      features: [
+        { title: "自适应匹配", desc: "基于上传图片与百炼理解的视觉美学智能呈现" },
+        { title: "多模态覆盖", desc: "Qwen文案、Qwen-Image大片、HappyHorse视频与CosyVoice旁白完整生产" }
+      ]
+    };
+    fs.writeFileSync(path.join(targetDir, "curation-data.json"), JSON.stringify(finalJSON, null, 2));
+
+    sendProgress(curationId, 6, "completed", "生成成功！");
+  } catch (err) {
+    console.error(err);
+    sendProgress(curationId, 6, "failed", `策展失败: ${err.message}`);
+  }
+});
+
+const PORT = 3001;
+app.listen(PORT, () => {
+  console.log(`Backend server running on http://localhost:${PORT}`);
+});
