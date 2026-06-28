@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { StudioScreen } from "./components/StudioScreen";
 import { CurationGallery } from "./components/CurationGallery";
 import { TracingBeam } from "./components/TracingBeam";
+import { ConceptGuide } from "./components/ConceptGuide";
 
 function App() {
   const [view, setView] = useState("studio");
@@ -44,8 +45,10 @@ function App() {
 
   return (
     <div className="w-full min-h-screen bg-sand-200">
-      {view === "studio" ? (
-        <StudioScreen onGenerate={handleGenerate} />
+      {view === "guide" ? (
+        <ConceptGuide onBack={() => setView("studio")} />
+      ) : view === "studio" ? (
+        <StudioScreen onGenerate={handleGenerate} onShowGuide={() => setView("guide")} />
       ) : (
         curationData ? (
           <TracingBeam>

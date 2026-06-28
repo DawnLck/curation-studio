@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Sparkles, Upload, FileText, Cpu, Eye, AlertTriangle } from "lucide-react";
 
-export const StudioScreen = ({ onGenerate }) => {
+export const StudioScreen = ({ onGenerate, onShowGuide }) => {
   const [text, setText] = useState("");
   const [subProduct1, setSubProduct1] = useState("");
   const [subProduct2, setSubProduct2] = useState("");
@@ -171,10 +171,18 @@ export const StudioScreen = ({ onGenerate }) => {
     <div className="w-full min-h-screen bg-sand-200 flex flex-col justify-center items-center py-12 px-6 grid-bg">
       <div className={`w-full bg-white border border-sand-300 rounded-lg p-10 shadow-xs hover:shadow-md transition-all duration-500 ease-in-out ${isGenerating ? 'max-w-4xl' : 'max-w-xl'}`}>
         
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 flex flex-col items-center">
           <span className="text-[10px] font-sans tracking-[0.3em] text-gray-500 uppercase">AI Curation Studio</span>
           <h1 className="font-serif text-3xl font-light text-charcoal mt-3 mb-1">Curation Studio.</h1>
           <p className="text-xs text-gray-500 font-sans">输入任意单品，自适应生产极简杂志感 Bento 展示页</p>
+          {!isGenerating && (
+            <button
+              onClick={onShowGuide}
+              className="mt-3 inline-flex items-center gap-1.5 text-[9px] text-amber-800 hover:text-amber-950 font-sans font-bold underline decoration-dotted transition-colors cursor-pointer"
+            >
+              📖 读懂策展工坊：了解我们的方案思路与核心理念
+            </button>
+          )}
         </div>
 
         {/* Mode Switcher */}
