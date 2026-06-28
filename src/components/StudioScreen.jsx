@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sparkles, Upload, FileText, Cpu, Eye } from "lucide-react";
 
 export const StudioScreen = ({ onGenerate }) => {
@@ -10,6 +10,14 @@ export const StudioScreen = ({ onGenerate }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [progressLog, setProgressLog] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    fetch("http://localhost:3001/api/curate/history")
+      .then((res) => res.json())
+      .then((data) => setHistory(data))
+      .catch((err) => console.error("Failed to load history list:", err));
+  }, [isGenerating]);
 
   const handleImageChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -205,6 +213,35 @@ export const StudioScreen = ({ onGenerate }) => {
         )}
 
       </div>
+
+      {/* 历史记录板块 */}
+      {!isGenerating && history.length > 0 && (
+        <div className="w-full max-w-xl mt-8 animate-fade-in">
+          <h3 className="text-[10px] uppercase tracking-widest text-gray-500 font-semibold font-sans mb-3 border-b border-sand-300 pb-2">
+            历史策展记录 / Past Curations
+          </h3>
+          <div className="space-y-3">
+            {history.map((item) => (
+              <div
+                key={item.id}
+                onClick={() => onGenerate("real", item.id)}
+                className="flex justify-between items-center bg-white border border-sand-300 rounded p-4 shadow-2xs hover:border-amber-800 hover:shadow-xs transition-all cursor-pointer group"
+              >
+                <div>
+                  <h4 className="text-xs font-semibold text-charcoal font-sans group-hover:text-amber-800 transition-colors">
+                    {item.name}
+                  </h4>
+                  <p className="text-[10px] text-gray-400 font-sans mt-0.5">{item.time}</p>
+                </div>
+                <span className="text-[10px] text-amber-800 font-sans font-medium uppercase group-hover:translate-x-1 transition-transform">
+                  加载策展 →
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

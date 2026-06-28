@@ -122,6 +122,44 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
   }
 });
 
+// 历史记录查询接口
+app.get("/api/curate/history", (req, res) => {
+  const genDir = path.join(__dirname, "public", "assets", "generated");
+  if (!fs.existsSync(genDir)) {
+    return res.json([]);
+  }
+  try {
+    const dirs = fs.readdirSync(genDir).filter(f => {
+      try {
+        return fs.statSync(path.join(genDir, f)).isDirectory();
+      } catch (e) {
+        return false;
+      }
+    });
+    const history = dirs.map(dir => {
+      const jsonPath = path.join(genDir, dir, "curation-data.json");
+      if (fs.existsSync(jsonPath)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+          const timestamp = dir.split("-")[1];
+          const timeStr = timestamp ? new Date(parseInt(timestamp)).toLocaleString("zh-CN") : "未知时间";
+          return { id: dir, name: data.productName, subtitle: data.subtitle, time: timeStr };
+        } catch (jsonErr) {
+          return null;
+        }
+      }
+      return null;
+    }).filter(Boolean);
+    
+    // 按时间倒序排序
+    history.sort((a, b) => b.id.localeCompare(a.id));
+    res.json(history);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to read history" });
+  }
+});
+
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
