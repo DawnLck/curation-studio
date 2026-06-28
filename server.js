@@ -413,15 +413,104 @@ app.post("/api/curate/regenerate-asset", async (req, res) => {
     return res.status(400).json({ error: "Missing curationId or assetType" });
   }
 
-  const targetDir = path.join(__dirname, "public", "assets", "generated", curationId);
+  const isDemo = curationId === "minimalist-vase";
+  const targetDir = isDemo
+    ? path.join(__dirname, "public", "assets", "minimalist-vase")
+    : path.join(__dirname, "public", "assets", "generated", curationId);
+
   const jsonPath = path.join(targetDir, "curation-data.json");
   if (!fs.existsSync(jsonPath)) {
-    return res.status(404).json({ error: "Curation folder not found" });
+    return res.status(404).json({ error: `Curation folder not found: ${curationId}` });
   }
 
   try {
-    const data = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+    let data = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
     const timestamp = Date.now();
+
+    // 如果是旧数据结构，在运行时自动升级迁移为历史版本追踪架构，防止旧测试记录崩溃 (Defensive Elegance)
+    if (!data.history) {
+      console.log(`[Schema Migration] 正在迁移旧版策展记录数据模型: ${curationId}`);
+      
+      const editorialVal = data.editorial || { headline: "静默之物", body: "" };
+      const voicePathVal = data.voicePath || "";
+      const videoPathVal = data.videoPath || "";
+      const videoPromptVal = data.videoPrompt || "The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic";
+      
+      const imgPaths = data.imagePaths || (data.imagePath ? [data.imagePath] : []);
+      const imgPrompts = data.imagePrompts || [];
+      
+      const subProductsVal = data.subProducts || [];
+      const ensembleVal = data.ensemble || null;
+      
+      data.activeVersions = {
+        editorial: 0,
+        hero_1: 0,
+        hero_2: 0,
+        hero_3: 0,
+        subProduct1: 0,
+        subProduct2: 0,
+        ensemble: 0,
+        video: 0
+      };
+      
+      data.history = {
+        editorial: [
+          {
+            headline: editorialVal.headline || editorialVal.title || "静默新品",
+            body: editorialVal.body || editorialVal.desc || "",
+            voicePath: voicePathVal
+          }
+        ],
+        hero_1: [
+          {
+            imagePath: imgPaths[0] || "",
+            prompt: imgPrompts[0] || "A professional product photography of the product"
+          }
+        ],
+        hero_2: [
+          {
+            imagePath: imgPaths[1] || "",
+            prompt: imgPrompts[1] || "A detail close-up photography of the product"
+          }
+        ],
+        hero_3: [
+          {
+            imagePath: imgPaths[2] || "",
+            prompt: imgPrompts[2] || "A lifestyle photography of the product"
+          }
+        ],
+        subProduct1: subProductsVal[0] ? [
+          {
+            name: subProductsVal[0].name || "搭配单品一",
+            desc: subProductsVal[0].desc || "",
+            imagePath: subProductsVal[0].imagePath || "",
+            prompt: subProductsVal[0].prompt || "minimalist home accessory"
+          }
+        ] : [],
+        subProduct2: subProductsVal[1] ? [
+          {
+            name: subProductsVal[1].name || "搭配单品二",
+            desc: subProductsVal[1].desc || "",
+            imagePath: subProductsVal[1].imagePath || "",
+            prompt: subProductsVal[1].prompt || "styled lifestyle item"
+          }
+        ] : [],
+        ensemble: ensembleVal ? [
+          {
+            imagePath: ensembleVal.imagePath || "",
+            prompt: ensembleVal.prompt || "styled lookbook setup photography"
+          }
+        ] : [],
+        video: [
+          {
+            videoPath: videoPathVal,
+            prompt: videoPromptVal
+          }
+        ]
+      };
+      
+      fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2));
+    }
 
     if (assetType === "editorial") {
       // 重新生成文案
