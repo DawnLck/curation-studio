@@ -6,15 +6,22 @@ import { TracingBeam } from "./components/TracingBeam";
 function App() {
   const [view, setView] = useState("studio");
   const [curationData, setCurationData] = useState(null);
+  const [loadPath, setLoadPath] = useState("/assets/minimalist-vase/curation-data.json");
 
+  // 动态拉取所选资产的配置文件
   useEffect(() => {
-    fetch("/assets/minimalist-vase/curation-data.json")
+    fetch(loadPath)
       .then((res) => res.json())
       .then((data) => setCurationData(data))
       .catch((err) => console.error("Failed to load curation data:", err));
-  }, []);
+  }, [loadPath]);
 
-  const handleGenerate = () => {
+  const handleGenerate = (mode, curationId) => {
+    if (mode === "demo") {
+      setLoadPath("/assets/minimalist-vase/curation-data.json");
+    } else {
+      setLoadPath(`/assets/generated/${curationId}/curation-data.json`);
+    }
     setView("gallery");
   };
 
@@ -37,7 +44,6 @@ function App() {
           </div>
         )
       )}
-
     </div>
   );
 }
