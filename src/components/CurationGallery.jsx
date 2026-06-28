@@ -18,6 +18,7 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
   const [modalContent, setModalContent] = useState(null);
   const [videoFit, setVideoFit] = useState("cover");
   const [isVideoLightboxOpen, setIsVideoLightboxOpen] = useState(false);
+  const [isEnsembleLightboxOpen, setIsEnsembleLightboxOpen] = useState(false);
   const [regenerating, setRegenerating] = useState({});
 
   // 历史版本追踪与安全兜底读取
@@ -355,13 +356,22 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
                 alt="Ensemble Lookbook"
                 className="w-full h-full object-cover select-none pointer-events-none absolute inset-0 group-hover:scale-[1.02] transition-transform duration-700"
               />
-              <button
-                onClick={() => setModalContent({ title: "套系搭配大片生成提示词 (Ensemble Prompt)", prompt: activeEnsemble.prompt || "（未提供提示词）" })}
-                className="absolute bottom-4 right-4 p-2 rounded-full bg-white/90 hover:bg-white text-gray-600 border border-sand-300 transition-colors cursor-pointer z-10 shadow-xs"
-                title="查看套系提示词"
-              >
-                <Info size={14} />
-              </button>
+              <div className="absolute bottom-4 right-4 flex gap-1.5 z-10">
+                <button
+                  onClick={() => setIsEnsembleLightboxOpen(true)}
+                  className="p-2 rounded-full bg-white/90 hover:bg-white text-gray-600 border border-sand-300 transition-colors cursor-pointer shadow-xs"
+                  title="放大全景合影 (Zoom Image)"
+                >
+                  <Maximize2 size={14} />
+                </button>
+                <button
+                  onClick={() => setModalContent({ title: "套系搭配大片生成提示词 (Ensemble Prompt)", prompt: activeEnsemble.prompt || "（未提供提示词）" })}
+                  className="p-2 rounded-full bg-white/90 hover:bg-white text-gray-600 border border-sand-300 transition-colors cursor-pointer shadow-xs"
+                  title="查看套系提示词"
+                >
+                  <Info size={14} />
+                </button>
+              </div>
             </div>
           )}
 
@@ -439,6 +449,41 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
             <div className="p-4 bg-charcoal border-t border-white/10 text-left">
               <span className="text-[9px] font-sans tracking-wider text-amber-500 font-bold uppercase">HappyHorse 1.1 剧院预览</span>
               <h4 className="font-serif text-sm text-sand-100 mt-1">{data.productName} · 动态氛围大片</h4>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ensemble Lightbox Modal */}
+      {isEnsembleLightboxOpen && activeEnsemble && (
+        <div 
+          className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-6"
+          onClick={() => setIsEnsembleLightboxOpen(false)}
+        >
+          <div 
+            className="w-full max-w-4xl bg-white border border-sand-300 rounded-lg overflow-hidden shadow-2xl relative animate-fade-in flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="absolute top-4 right-4 z-20">
+              <button
+                onClick={() => setIsEnsembleLightboxOpen(false)}
+                className="text-gray-500 hover:text-charcoal bg-white/80 hover:bg-white px-3 py-1.5 border border-sand-300 rounded-full transition-colors cursor-pointer font-sans text-xs shadow-xs"
+              >
+                ✕ 关闭
+              </button>
+            </div>
+            
+            <div className="w-full aspect-4/3 bg-sand-50 flex items-center justify-center overflow-hidden">
+              <img
+                src={activeEnsemble.imagePath}
+                alt="Ensemble Lightbox"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            
+            <div className="p-5 bg-white border-t border-sand-200 text-left">
+              <span className="text-[9px] font-sans tracking-wider text-amber-800 font-bold uppercase">套系搭配全景合影 / Ensemble Lookbook</span>
+              <h4 className="font-serif text-base text-charcoal mt-1">{data.productName} · 搭配空间意境大片</h4>
             </div>
           </div>
         </div>
