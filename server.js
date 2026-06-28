@@ -175,43 +175,69 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     const imgPromptSub2 = `A beautiful eye-level product shot of ${subProduct2Desc}, quiet minimalist wabi-sabi background, warm evening shadows, 35mm film photography`;
     const imgPromptEnsemble = `A professional styled lookbook shot showing the main product ${productVisualDetails || description} styled harmoniously together with ${subProduct1Desc} and ${subProduct2Desc} on a concrete table, soft afternoon sunlight casting shadows, 35mm film photography, minimalist wabi-sabi setup`;
 
-    // 采用顺序执行 + 智能重试，确保并发安全，并强制指定免费配额的 Pro 图像模型
-    await runWithRetry(["image", "generate", "--prompt", imgPrompt1, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_1"]);
-    await runWithRetry(["image", "generate", "--prompt", imgPrompt2, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_2"]);
-    await runWithRetry(["image", "generate", "--prompt", imgPrompt3, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_3"]);
-    await runWithRetry(["image", "generate", "--prompt", imgPromptSub1, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_1"]);
-    await runWithRetry(["image", "generate", "--prompt", imgPromptSub2, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_2"]);
-    await runWithRetry(["image", "generate", "--prompt", imgPromptEnsemble, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "ensemble"]);
-    
-    // 重命名下载的全部 6 张图片
-    try {
-      const files = fs.readdirSync(targetDir);
-      for (let i = 1; i <= 3; i++) {
-        const file = files.find(f => f.startsWith(`hero_${i}_`));
+    // 辅助命名重构函数
+    const renameFile = (prefix, targetName) => {
+      try {
+        const files = fs.readdirSync(targetDir);
+        const file = files.find(f => f.startsWith(`${prefix}_`));
         if (file) {
-          fs.renameSync(path.join(targetDir, file), path.join(targetDir, `hero_${i}.png`));
+          fs.renameSync(path.join(targetDir, file), path.join(targetDir, targetName));
+          return true;
         }
+      } catch (err) {
+        console.error(`Rename ${prefix} failed`, err);
       }
-      const sub1File = files.find(f => f.startsWith("sub_1_"));
-      if (sub1File) fs.renameSync(path.join(targetDir, sub1File), path.join(targetDir, "sub_1.png"));
-      
-      const sub2File = files.find(f => f.startsWith("sub_2_"));
-      if (sub2File) fs.renameSync(path.join(targetDir, sub2File), path.join(targetDir, "sub_2.png"));
-      
-      const ensembleFile = files.find(f => f.startsWith("ensemble_"));
-      if (ensembleFile) fs.renameSync(path.join(targetDir, ensembleFile), path.join(targetDir, "ensemble.png"));
-    } catch (err) {
-      console.error("Rename storyboard images failed", err);
-    }
-    
-    const generatedImagePaths = [
-      `http://localhost:3001/assets/generated/${curationId}/hero_1.png`,
-      `http://localhost:3001/assets/generated/${curationId}/hero_2.png`,
-      `http://localhost:3001/assets/generated/${curationId}/hero_3.png`
-    ];
-    const generatedSub1Path = `http://localhost:3001/assets/generated/${curationId}/sub_1.png`;
-    const generatedSub2Path = `http://localhost:3001/assets/generated/${curationId}/sub_2.png`;
-    const generatedEnsemblePath = `http://localhost:3001/assets/generated/${curationId}/ensemble.png`;
+      return false;
+    };
+
+    // 采用顺序执行 + 智能重试，确保并发安全，并在完成后以 SSE 动态渐进式推送缩略图，防止界面假死感
+    sendProgress(curationId, 2, "processing", "正在绘制主商品分镜一 (全景意境图)...");
+    await runWithRetry(["image", "generate", "--prompt", imgPrompt1, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_1"]);
+    renameFile("hero_1", "hero_1.png");
+    const hero1Url = `http://localhost:3001/assets/generated/${curationId}/hero_1.png`;
+    sendProgress(curationId, 2, "processing", "主商品分镜一渲染成功！正在绘制分镜二 (细节特写)...", {
+      imagePaths: [hero1Url]
+    });
+
+    await runWithRetry(["image", "generate", "--prompt", imgPrompt2, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_2"]);
+    renameFile("hero_2", "hero_2.png");
+    const hero2Url = `http://localhost:3001/assets/generated/${curationId}/hero_2.png`;
+    sendProgress(curationId, 2, "processing", "主商品分镜二渲染成功！正在绘制分镜三 (使用场景)...", {
+      imagePaths: [hero1Url, hero2Url]
+    });
+
+    await runWithRetry(["image", "generate", "--prompt", imgPrompt3, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_3"]);
+    renameFile("hero_3", "hero_3.png");
+    const hero3Url = `http://localhost:3001/assets/generated/${curationId}/hero_3.png`;
+    sendProgress(curationId, 2, "processing", `主商品分镜全部就绪！正在绘制搭配小件一 [${subProduct1Name}]...`, {
+      imagePaths: [hero1Url, hero2Url, hero3Url]
+    });
+
+    await runWithRetry(["image", "generate", "--prompt", imgPromptSub1, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_1"]);
+    renameFile("sub_1", "sub_1.png");
+    const sub1Url = `http://localhost:3001/assets/generated/${curationId}/sub_1.png`;
+    sendProgress(curationId, 2, "processing", `搭配小件一渲染成功！正在绘制搭配小件二 [${subProduct2Name}]...`, {
+      imagePaths: [hero1Url, hero2Url, hero3Url],
+      sub1Path: sub1Url
+    });
+
+    await runWithRetry(["image", "generate", "--prompt", imgPromptSub2, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_2"]);
+    renameFile("sub_2", "sub_2.png");
+    const sub2Url = `http://localhost:3001/assets/generated/${curationId}/sub_2.png`;
+    sendProgress(curationId, 2, "processing", "搭配小件全部就绪！正在绘制最终空间全景合影...", {
+      imagePaths: [hero1Url, hero2Url, hero3Url],
+      sub1Path: sub1Url,
+      sub2Path: sub2Url
+    });
+
+    await runWithRetry(["image", "generate", "--prompt", imgPromptEnsemble, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "ensemble"]);
+    renameFile("ensemble", "ensemble.png");
+    const ensembleUrl = `http://localhost:3001/assets/generated/${curationId}/ensemble.png`;
+
+    const generatedImagePaths = [hero1Url, hero2Url, hero3Url];
+    const generatedSub1Path = sub1Url;
+    const generatedSub2Path = sub2Url;
+    const generatedEnsemblePath = ensembleUrl;
 
     sendProgress(curationId, 2, "processing", "大片与套系搭配图渲染完成！", { 
       imagePaths: generatedImagePaths,
