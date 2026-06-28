@@ -13,6 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use("/assets", express.static(path.join(__dirname, "public", "assets")));
 
 // 配置 Multer 文件上传
 const upload = multer({ dest: "uploads/" });
@@ -88,19 +89,19 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     } catch (err) {
       console.error("Rename image failed", err);
     }
-    sendProgress(curationId, 2, "completed", "意境渲染图绘制完成！", { imagePath: `/assets/generated/${curationId}/hero.png` });
+    sendProgress(curationId, 2, "completed", "意境渲染图绘制完成！", { imagePath: `http://localhost:3001/assets/generated/${curationId}/hero.png` });
 
     // Step 3: 动态氛围视频生成 (HappyHorse 1.1)
     sendProgress(curationId, 3, "processing", "HappyHorse 1.1 正在生成 5 秒动态呼吸运镜视频...");
     const videoPrompt = `The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic`;
     
     await execAsync(`bl video generate --image "${path.join(targetDir, "hero.png")}" --prompt "${videoPrompt}" --resolution 720P --duration 5 --watermark false --download "${path.join(targetDir, "ambient.mp4")}"`);
-    sendProgress(curationId, 3, "completed", "氛围动态视频烘焙完成！", { videoPath: `/assets/generated/${curationId}/ambient.mp4` });
+    sendProgress(curationId, 3, "completed", "氛围动态视频烘焙完成！", { videoPath: `http://localhost:3001/assets/generated/${curationId}/ambient.mp4` });
 
     // Step 4: 旁白配音合成 (CosyVoice)
     sendProgress(curationId, 4, "processing", "CosyVoice 正在合成策展人配音旁白...");
     await execAsync(`bl speech synthesize --text "${curationText.body}" --voice longwan_v3 --language zh --out "${path.join(targetDir, "narration.mp3")}"`);
-    sendProgress(curationId, 4, "completed", "声音旁白录音合成完成！", { voicePath: `/assets/generated/${curationId}/narration.mp3` });
+    sendProgress(curationId, 4, "completed", "声音旁白录音合成完成！", { voicePath: `http://localhost:3001/assets/generated/${curationId}/narration.mp3` });
 
     // Step 5: 写入静态配置文件
     sendProgress(curationId, 5, "processing", "正在完成数据拼装与排版注入...");
@@ -109,9 +110,9 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       subtitle: "自适应智能策展单品",
       theme: "quiet-minimal",
       editorial: curationText,
-      imagePath: `/assets/generated/${curationId}/hero.png`,
-      videoPath: `/assets/generated/${curationId}/ambient.mp4`,
-      voicePath: `/assets/generated/${curationId}/narration.mp3`,
+      imagePath: `http://localhost:3001/assets/generated/${curationId}/hero.png`,
+      videoPath: `http://localhost:3001/assets/generated/${curationId}/ambient.mp4`,
+      voicePath: `http://localhost:3001/assets/generated/${curationId}/narration.mp3`,
       features: [
         { title: "自适应匹配", desc: "基于上传图片与百炼理解的视觉美学智能呈现" },
         { title: "多模态覆盖", desc: "Qwen文案、Qwen-Image大片、HappyHorse视频与CosyVoice旁白完整生产" }

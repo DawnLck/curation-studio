@@ -6,21 +6,34 @@ import { TracingBeam } from "./components/TracingBeam";
 function App() {
   const [view, setView] = useState("studio");
   const [curationData, setCurationData] = useState(null);
-  const [loadPath, setLoadPath] = useState("/assets/minimalist-vase/curation-data.json");
+  const [loadPath, setLoadPath] = useState("http://localhost:3001/assets/minimalist-vase/curation-data.json");
 
   // 动态拉取所选资产的配置文件
   useEffect(() => {
     fetch(loadPath)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
       .then((data) => setCurationData(data))
-      .catch((err) => console.error("Failed to load curation data:", err));
+      .catch((err) => {
+        console.error("Failed to load curation data from backend:", err);
+        // 防御性静默降级：如果后端获取失败，降级拉取前端本地静态资源
+        if (loadPath.startsWith("http://localhost:3001")) {
+          const fallbackPath = loadPath.replace("http://localhost:3001", "");
+          fetch(fallbackPath)
+            .then((res) => res.json())
+            .then((data) => setCurationData(data))
+            .catch((e) => console.error("Fallback load failed:", e));
+        }
+      });
   }, [loadPath]);
 
   const handleGenerate = (mode, curationId) => {
     if (mode === "demo") {
-      setLoadPath("/assets/minimalist-vase/curation-data.json");
+      setLoadPath("http://localhost:3001/assets/minimalist-vase/curation-data.json");
     } else {
-      setLoadPath(`/assets/generated/${curationId}/curation-data.json`);
+      setLoadPath(`http://localhost:3001/assets/generated/${curationId}/curation-data.json`);
     }
     setView("gallery");
   };
