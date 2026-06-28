@@ -175,13 +175,13 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     const imgPromptSub2 = `A beautiful eye-level product shot of ${subProduct2Desc}, quiet minimalist wabi-sabi background, warm evening shadows, 35mm film photography`;
     const imgPromptEnsemble = `A professional styled lookbook shot showing the main product ${productVisualDetails || description} styled harmoniously together with ${subProduct1Desc} and ${subProduct2Desc} on a concrete table, soft afternoon sunlight casting shadows, 35mm film photography, minimalist wabi-sabi setup`;
 
-    // 采用顺序执行 + 智能重试，确保并发安全
-    await runWithRetry(["image", "generate", "--prompt", imgPrompt1, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_1"]);
-    await runWithRetry(["image", "generate", "--prompt", imgPrompt2, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_2"]);
-    await runWithRetry(["image", "generate", "--prompt", imgPrompt3, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_3"]);
-    await runWithRetry(["image", "generate", "--prompt", imgPromptSub1, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_1"]);
-    await runWithRetry(["image", "generate", "--prompt", imgPromptSub2, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_2"]);
-    await runWithRetry(["image", "generate", "--prompt", imgPromptEnsemble, "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "ensemble"]);
+    // 采用顺序执行 + 智能重试，确保并发安全，并强制指定免费配额的 Pro 图像模型
+    await runWithRetry(["image", "generate", "--prompt", imgPrompt1, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_1"]);
+    await runWithRetry(["image", "generate", "--prompt", imgPrompt2, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_2"]);
+    await runWithRetry(["image", "generate", "--prompt", imgPrompt3, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "hero_3"]);
+    await runWithRetry(["image", "generate", "--prompt", imgPromptSub1, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_1"]);
+    await runWithRetry(["image", "generate", "--prompt", imgPromptSub2, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "sub_2"]);
+    await runWithRetry(["image", "generate", "--prompt", imgPromptEnsemble, "--model", "qwen-image-2.0-pro-2026-06-22", "--size", "4:3", "--watermark", "false", "--out-dir", imgOutDir, "--out-prefix", "ensemble"]);
     
     // 重命名下载的全部 6 张图片
     try {
