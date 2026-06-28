@@ -13,6 +13,14 @@
 
 ---
 
+## 界面和效果演示
+
+<img width="1214" height="1140" alt="image" src="https://github.com/user-attachments/assets/2fd2fe09-b1ab-4652-af7b-e7494fc01c49" />
+
+<img width="2028" height="1618" alt="image" src="https://github.com/user-attachments/assets/3de2a744-9cff-4e9a-84b5-7933765ae6e6" />
+
+<img width="2034" height="1416" alt="image" src="https://github.com/user-attachments/assets/c9bc49f3-0d44-429e-ad97-8e88c7868023" />
+
 ## 它能做什么？
 
 上传一张商品照片（甚至一张草图），写一句话描述，点击"开始策展" —— 后台会自动：
