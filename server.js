@@ -72,7 +72,7 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
       headline: rawJson.headline || rawJson.Headline || rawJson.title || "静默新品",
       body: rawJson.body || rawJson.Body || rawJson.content || ""
     };
-    sendProgress(curationId, 1, "completed", "大语言模型文案策划完成！", { editorial: curationText });
+    sendProgress(curationId, 1, "processing", "大语言模型文案策划完成！", { editorial: curationText });
 
     // Step 2: 意境商业图渲染 (Qwen-Image 2.0)
     sendProgress(curationId, 2, "processing", "Qwen-Image 2.0 绘制产品商业大片中...");
@@ -89,19 +89,19 @@ app.post("/api/curate", upload.single("image"), async (req, res) => {
     } catch (err) {
       console.error("Rename image failed", err);
     }
-    sendProgress(curationId, 2, "completed", "意境渲染图绘制完成！", { imagePath: `http://localhost:3001/assets/generated/${curationId}/hero.png` });
+    sendProgress(curationId, 2, "processing", "意境渲染图绘制完成！", { imagePath: `http://localhost:3001/assets/generated/${curationId}/hero.png` });
 
     // Step 3: 动态氛围视频生成 (HappyHorse 1.1)
     sendProgress(curationId, 3, "processing", "HappyHorse 1.1 正在生成 5 秒动态呼吸运镜视频...");
     const videoPrompt = `The sunlight gently shifts across the surface of the product, camera panning micro-movement, photorealistic cinematic`;
     
     await execAsync(`bl video generate --image "${path.join(targetDir, "hero.png")}" --prompt "${videoPrompt}" --resolution 720P --duration 5 --watermark false --download "${path.join(targetDir, "ambient.mp4")}"`);
-    sendProgress(curationId, 3, "completed", "氛围动态视频烘焙完成！", { videoPath: `http://localhost:3001/assets/generated/${curationId}/ambient.mp4` });
+    sendProgress(curationId, 3, "processing", "氛围动态视频烘焙完成！", { videoPath: `http://localhost:3001/assets/generated/${curationId}/ambient.mp4` });
 
     // Step 4: 旁白配音合成 (CosyVoice)
     sendProgress(curationId, 4, "processing", "CosyVoice 正在合成策展人配音旁白...");
     await execAsync(`bl speech synthesize --text "${curationText.body}" --voice longwan_v3 --language zh --out "${path.join(targetDir, "narration.mp3")}"`);
-    sendProgress(curationId, 4, "completed", "声音旁白录音合成完成！", { voicePath: `http://localhost:3001/assets/generated/${curationId}/narration.mp3` });
+    sendProgress(curationId, 4, "processing", "声音旁白录音合成完成！", { voicePath: `http://localhost:3001/assets/generated/${curationId}/narration.mp3` });
 
     // Step 5: 写入静态配置文件
     sendProgress(curationId, 5, "processing", "正在完成数据拼装与排版注入...");
