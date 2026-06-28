@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import { ThreeDCard } from "./ThreeDCard";
 import { TypeWriter } from "./TypeWriter";
 import { AudioNarration } from "./AudioNarration";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, Info, Maximize2, Minimize2, ZoomIn } from "lucide-react";
 
 export const CurationGallery = ({ data, onReset }) => {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [modalContent, setModalContent] = useState(null);
+  const [videoFit, setVideoFit] = useState("cover");
+  const [isVideoLightboxOpen, setIsVideoLightboxOpen] = useState(false);
 
   return (
     <div className="w-full min-h-screen py-16 bg-sand-200">
@@ -102,16 +104,35 @@ export const CurationGallery = ({ data, onReset }) => {
               loop
               muted
               playsInline
-              className="w-full h-full object-cover"
+              className={`w-full h-full transition-all duration-300 ${videoFit === "cover" ? "object-cover" : "object-contain bg-charcoal/5"}`}
             />
-            {/* Info button */}
-            <button
-              onClick={() => setModalContent({ title: "氛围动态视频生成提示词 (Video Prompt)", prompt: data.videoPrompt || "（未提供提示词数据）" })}
-              className="absolute bottom-3 right-3 p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-600 border border-sand-300 z-10 transition-colors cursor-pointer shadow-xs"
-              title="查看视频提示词"
-            >
-              <Info size={12} />
-            </button>
+            {/* Control buttons group */}
+            <div className="absolute bottom-3 right-3 flex gap-1.5 z-10">
+              {/* Toggle Fit Button */}
+              <button
+                onClick={() => setVideoFit(prev => prev === 'cover' ? 'contain' : 'cover')}
+                className="p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-600 border border-sand-300 transition-colors cursor-pointer shadow-xs"
+                title={videoFit === 'cover' ? "适应视图 (Fit)" : "填满视图 (Fill)"}
+              >
+                {videoFit === 'cover' ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
+              </button>
+              {/* Zoom In Lightbox Button */}
+              <button
+                onClick={() => setIsVideoLightboxOpen(true)}
+                className="p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-600 border border-sand-300 transition-colors cursor-pointer shadow-xs"
+                title="剧院模式 (Theater Mode)"
+              >
+                <ZoomIn size={12} />
+              </button>
+              {/* Info button */}
+              <button
+                onClick={() => setModalContent({ title: "氛围动态视频生成提示词 (Video Prompt)", prompt: data.videoPrompt || "（未提供提示词数据）" })}
+                className="p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-600 border border-sand-300 transition-colors cursor-pointer shadow-xs"
+                title="查看视频提示词"
+              >
+                <Info size={12} />
+              </button>
+            </div>
           </div>
 
           {/* Box 4: Audio Player (CosyVoice) */}
@@ -167,6 +188,43 @@ export const CurationGallery = ({ data, onReset }) => {
               >
                 关闭
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video Lightbox Modal */}
+      {isVideoLightboxOpen && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-6"
+          onClick={() => setIsVideoLightboxOpen(false)}
+        >
+          <div 
+            className="w-full max-w-4xl bg-charcoal/90 border border-white/10 rounded-lg overflow-hidden shadow-2xl relative animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="absolute top-4 right-4 z-20">
+              <button
+                onClick={() => setIsVideoLightboxOpen(false)}
+                className="text-white/60 hover:text-white bg-black/40 hover:bg-black/60 p-2 rounded-full transition-colors cursor-pointer font-sans text-xs"
+              >
+                ✕ 关闭
+              </button>
+            </div>
+            
+            <div className="w-full aspect-video bg-black flex items-center justify-center">
+              <video
+                src={data.videoPath}
+                autoPlay
+                controls
+                playsInline
+                className="w-full h-full object-contain"
+              />
+            </div>
+            
+            <div className="p-4 bg-charcoal border-t border-white/10 text-left">
+              <span className="text-[9px] font-sans tracking-wider text-amber-500 font-bold uppercase">HappyHorse 1.1 剧院预览</span>
+              <h4 className="font-serif text-sm text-sand-100 mt-1">{data.productName} · 动态氛围大片</h4>
             </div>
           </div>
         </div>
