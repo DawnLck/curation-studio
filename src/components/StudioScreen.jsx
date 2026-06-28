@@ -174,7 +174,6 @@ export const StudioScreen = ({ onGenerate, onShowGuide }) => {
       <div className={`w-full bg-white border border-sand-300 rounded-lg p-10 shadow-xs hover:shadow-md transition-all duration-500 ease-in-out ${isGenerating ? 'max-w-4xl' : 'max-w-xl'}`}>
         
         <div className="text-center mb-8 flex flex-col items-center">
-          <span className="text-[10px] font-sans tracking-[0.3em] text-gray-500 uppercase">AI Curation Studio</span>
           <h1 className="font-serif text-3xl font-light text-charcoal mt-3 mb-1">Curation Studio.</h1>
           <p className="text-xs text-gray-500 font-sans">输入任意单品，自适应生产极简杂志感 Bento 展示页</p>
           {!isGenerating && (

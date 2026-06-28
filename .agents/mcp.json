@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "bailian-curator": {
+      "command": "node",
+      "args": ["./mcp-server.js"]
+    }
+  }
+}
