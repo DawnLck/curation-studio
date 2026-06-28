@@ -1,5 +1,3 @@
-<![CDATA[<div align="center">
-
 # 🏛️ 百炼策展工坊 · Bailian Curation Studio
 
 **用一张参考图，全自动生成电商多模态宣发素材**
@@ -193,7 +191,11 @@ node .agents/skills/bailian-curator/scripts/curate.js \
 
 ---
 
-## 许可
+## 许可证
 
-MIT
-]]>
+本项目基于 [Apache License 2.0](./LICENSE) 开源。你可以自由使用、修改与分发，但需遵守协议第 4 条：
+
+- 保留原始的版权、署名与 [`NOTICE`](./NOTICE) 声明；
+- **任何基于本项目修改或衍生的产品，必须显著标注来源「Bailian 项目」**；
+- 对修改过的文件需注明你做了改动；
+- 随附一份 LICENSE 副本。
