@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ThreeDCard } from "./ThreeDCard";
 import { TypeWriter } from "./TypeWriter";
 import { AudioNarration } from "./AudioNarration";
@@ -10,7 +10,10 @@ import {
   ZoomIn, 
   RotateCw, 
   ChevronLeft, 
-  ChevronRight 
+  ChevronRight,
+  Edit2,
+  Check,
+  X
 } from "lucide-react";
 
 export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData }) => {
@@ -20,6 +23,14 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
   const [isVideoLightboxOpen, setIsVideoLightboxOpen] = useState(false);
   const [isEnsembleLightboxOpen, setIsEnsembleLightboxOpen] = useState(false);
   const [regenerating, setRegenerating] = useState({});
+
+  // 文本实时编辑状态与同步缓存
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(data.productName);
+  const [isEditingEditorial, setIsEditingEditorial] = useState(false);
+  const [editedHeadline, setEditedHeadline] = useState("");
+  const [editedBody, setEditedBody] = useState("");
+  const [isSavingEditorial, setIsSavingEditorial] = useState(false);
 
   // 历史版本追踪与安全兜底读取
   const history = data.history || {};
@@ -66,6 +77,66 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
       alert(`重新生成失败: ${err.message}`);
     } finally {
       setRegenerating(prev => ({ ...prev, [type]: false }));
+    }
+  };
+
+  // 同步当前活跃版本的社论文案到文本编辑缓存中
+  useEffect(() => {
+    if (activeEditorial) {
+      setEditedHeadline(activeEditorial.headline || "");
+      setEditedBody(activeEditorial.body || "");
+    }
+  }, [activeEditorial]);
+
+  const handleSaveTitle = async () => {
+    if (!editedTitle.trim()) return;
+    const curationId = loadPath && loadPath.includes("/generated/") 
+      ? loadPath.split("/generated/")[1].split("/")[0] 
+      : "minimalist-vase";
+
+    try {
+      const res = await fetch("http://localhost:3001/api/curate/edit-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ curationId, assetType: "title", productName: editedTitle })
+      });
+      if (!res.ok) throw new Error("保存标题请求失败");
+      const newData = await res.json();
+      onUpdateCurationData(newData);
+      setIsEditingTitle(false);
+    } catch (err) {
+      console.error(err);
+      alert(`保存标题失败: ${err.message}`);
+    }
+  };
+
+  const handleSaveEditorial = async () => {
+    if (!editedHeadline.trim() || !editedBody.trim()) return;
+    const curationId = loadPath && loadPath.includes("/generated/") 
+      ? loadPath.split("/generated/")[1].split("/")[0] 
+      : "minimalist-vase";
+
+    setIsSavingEditorial(true);
+    try {
+      const res = await fetch("http://localhost:3001/api/curate/edit-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          curationId, 
+          assetType: "editorial", 
+          headline: editedHeadline, 
+          body: editedBody 
+        })
+      });
+      if (!res.ok) throw new Error("保存社论请求失败");
+      const newData = await res.json();
+      onUpdateCurationData(newData);
+      setIsEditingEditorial(false);
+    } catch (err) {
+      console.error(err);
+      alert(`保存社论文案失败: ${err.message}`);
+    } finally {
+      setIsSavingEditorial(false);
     }
   };
 
@@ -154,16 +225,48 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
         </button>
 
         {/* Header */}
-        <div className="text-center border-b border-sand-400 pb-8 mb-12 animate-fade-in pt-4">
+        <div className="text-center border-b border-sand-400 pb-8 mb-12 animate-fade-in pt-4 flex flex-col items-center justify-center">
           <span className="text-[10px] font-sans tracking-[0.3em] text-gray-500 uppercase">
             {isMeme ? "🔥 爆款表情包宣发 / Viral Meme Curation" : "The Art of Curation"}
           </span>
-          <h1 className={isMeme 
-            ? "font-sans font-black text-4xl md:text-5xl text-charcoal mt-4 mb-2 tracking-tight uppercase"
-            : "font-serif text-4xl md:text-5xl font-light text-charcoal mt-3 mb-1"
-          }>
-            {data.productName}
-          </h1>
+          {isEditingTitle ? (
+            <div className="flex items-center gap-2 mt-4 max-w-lg w-full">
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                className="flex-grow font-serif text-2xl md:text-3xl text-charcoal border border-sand-400 px-3 py-1.5 bg-white text-center focus:outline-none focus:border-amber-800"
+              />
+              <button 
+                onClick={handleSaveTitle}
+                className="p-2 rounded bg-charcoal text-white hover:bg-amber-900 cursor-pointer transition-colors"
+                title="保存"
+              >
+                <Check size={14} />
+              </button>
+              <button 
+                onClick={() => { setIsEditingTitle(false); setEditedTitle(data.productName); }}
+                className="p-2 rounded bg-sand-300 text-gray-700 hover:bg-sand-400 cursor-pointer transition-colors"
+                title="取消"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <h1 className={`flex items-center justify-center gap-2.5 mt-3 mb-1 group ${isMeme 
+              ? "font-sans font-black text-4xl md:text-5xl text-charcoal tracking-tight uppercase"
+              : "font-serif text-4xl md:text-5xl font-light text-charcoal"
+            }`}>
+              <span>{data.productName}</span>
+              <button
+                onClick={() => setIsEditingTitle(true)}
+                className="opacity-0 group-hover:opacity-100 p-1.5 rounded hover:bg-sand-300 text-gray-400 hover:text-gray-700 transition-all cursor-pointer"
+                title="编辑展品名称"
+              >
+                <Edit2 size={14} />
+              </button>
+            </h1>
+          )}
         </div>
 
         {/* Bento Grid */}
@@ -217,26 +320,87 @@ export const CurationGallery = ({ data, onReset, loadPath, onUpdateCurationData 
           <div className={`p-8 md:row-span-2 flex flex-col justify-between ${cardClass}`}>
             {renderRegeneratingOverlay("editorial")}
             {renderControlPanel("editorial")}
-            <div>
-              <span className="text-[9px] font-sans tracking-[0.2em] text-amber-800 font-semibold uppercase">
-                {isMeme ? "🔥 爆款宣发 / Viral Meme" : "社论推荐 / Editorial"}
-              </span>
-              <h3 className={`${isMeme ? 'font-sans font-black text-2xl' : 'font-serif text-2xl font-normal'} text-charcoal mt-4 mb-4 leading-snug`}>
-                {activeEditorial.headline}
-              </h3>
-              <div className="text-xs leading-relaxed text-gray-600">
-                <TypeWriter text={activeEditorial.body} speed={45} />
+            
+            {/* 保存并重制语音的 Loading 层 */}
+            {isSavingEditorial && (
+              <div className="absolute inset-0 bg-white/75 backdrop-blur-xs flex flex-col items-center justify-center z-35 animate-fade-in">
+                <div className="w-6 h-6 rounded-full border-2 border-sand-300 border-t-amber-800 animate-spin"></div>
+                <span className="text-[9px] font-sans font-bold text-amber-800 tracking-wider mt-2">同步并重制人声语音中...</span>
               </div>
-            </div>
-            <div className="border-t border-sand-200 pt-4 text-[9px] text-gray-400 font-sans flex items-center justify-between">
-              <span>💡 由 Qwen3.7-max 润色</span>
-              <button 
-                onClick={() => setModalContent({ title: "社论广告文案策划提示词", prompt: isMeme ? "基于主商品搭配和滑稽卖点，写一段幽默吸睛的网络梗词。" : "基于主商品细节和搭配商品细节，撰写符合 wabi-sabi 美学的极简杂志广告短文。" })}
-                className="text-gray-400 hover:text-gray-600 cursor-pointer"
-              >
-                <Info size={10} />
-              </button>
-            </div>
+            )}
+
+            {isEditingEditorial ? (
+              <div className="space-y-4 flex-grow flex flex-col justify-between z-10">
+                <div className="space-y-3">
+                  <span className="text-[9px] font-sans tracking-[0.2em] text-amber-800 font-semibold uppercase">编辑文案 / Edit Copy</span>
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] font-sans font-bold text-gray-400 block uppercase">社论标题</label>
+                    <input
+                      type="text"
+                      value={editedHeadline}
+                      onChange={(e) => setEditedHeadline(e.target.value)}
+                      className="w-full text-xs font-semibold text-charcoal border border-sand-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-amber-800 bg-sand-50"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[8px] font-sans font-bold text-gray-400 block uppercase">解说正文</label>
+                    <textarea
+                      rows="6"
+                      value={editedBody}
+                      onChange={(e) => setEditedBody(e.target.value)}
+                      className="w-full text-[11px] text-gray-600 border border-sand-300 rounded p-2.5 focus:outline-none focus:border-amber-800 bg-sand-50 resize-none leading-relaxed"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-2 border-t border-sand-200">
+                  <button
+                    onClick={handleSaveEditorial}
+                    className="flex-grow py-2 bg-charcoal hover:bg-amber-900 text-white rounded text-[10px] font-sans font-bold tracking-wider uppercase cursor-pointer transition-colors"
+                  >
+                    保存并同步配音
+                  </button>
+                  <button
+                    onClick={() => { setIsEditingEditorial(false); setEditedHeadline(activeEditorial.headline || ""); setEditedBody(activeEditorial.body || ""); }}
+                    className="px-3 py-2 bg-sand-200 hover:bg-sand-300 text-gray-600 rounded text-[10px] font-sans font-bold uppercase cursor-pointer transition-colors"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex justify-between items-start">
+                  <span className="text-[9px] font-sans tracking-[0.2em] text-amber-800 font-semibold uppercase">
+                    {isMeme ? "🔥 爆款宣发 / Viral Meme" : "社论推荐 / Editorial"}
+                  </span>
+                  <button
+                    onClick={() => setIsEditingEditorial(true)}
+                    className="p-1 rounded hover:bg-sand-100 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                    title="编辑社论内容"
+                  >
+                    <Edit2 size={11} />
+                  </button>
+                </div>
+                <h3 className={`${isMeme ? 'font-sans font-black text-2xl' : 'font-serif text-2xl font-normal'} text-charcoal mt-4 mb-4 leading-snug`}>
+                  {activeEditorial.headline}
+                </h3>
+                <div className="text-xs leading-relaxed text-gray-600">
+                  <TypeWriter text={activeEditorial.body} speed={45} />
+                </div>
+              </div>
+            )}
+
+            {!isEditingEditorial && (
+              <div className="border-t border-sand-200 pt-4 text-[9px] text-gray-400 font-sans flex items-center justify-between">
+                <span>💡 由 Qwen3.7-max 润色</span>
+                <button 
+                  onClick={() => setModalContent({ title: "社论广告文案策划提示词", prompt: isMeme ? "基于主商品搭配和滑稽卖点，写一段幽默吸睛的网络梗词。" : "基于主商品细节 and 搭配商品细节，撰写符合 wabi-sabi 美学的极简杂志广告短文。" })}
+                  className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  <Info size={10} />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Box 3: Ambient Video (HappyHorse) */}

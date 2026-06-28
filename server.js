@@ -665,6 +665,70 @@ app.post("/api/curate/regenerate-asset", async (req, res) => {
   }
 });
 
+// 新增文本实时编辑接口，支持标题修改与社论改词后的语音自动重制同步
+app.post("/api/curate/edit-text", async (req, res) => {
+  const { curationId, assetType, headline, body, productName } = req.body;
+  if (!curationId || !assetType) {
+    return res.status(400).json({ error: "Missing curationId or assetType" });
+  }
+
+  const isDemo = curationId === "minimalist-vase";
+  const targetDir = isDemo
+    ? path.join(__dirname, "public", "assets", "minimalist-vase")
+    : path.join(__dirname, "public", "assets", "generated", curationId);
+
+  const jsonPath = path.join(targetDir, "curation-data.json");
+  if (!fs.existsSync(jsonPath)) {
+    return res.status(404).json({ error: `Curation folder not found: ${curationId}` });
+  }
+
+  try {
+    let data = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+
+    if (assetType === "title") {
+      data.productName = productName;
+    } else if (assetType === "editorial") {
+      const activeVersions = data.activeVersions || {};
+      const activeIdx = activeVersions.editorial || 0;
+      
+      if (data.history && data.history.editorial && data.history.editorial[activeIdx]) {
+        // 更新当前活跃快照文本
+        data.history.editorial[activeIdx].headline = headline;
+        data.history.editorial[activeIdx].body = body;
+
+        // 自动重制合成相匹配的人声语音 (CosyVoice-3)
+        const timestamp = Date.now();
+        const voiceFile = `narration_edited_${timestamp}.mp3`;
+        
+        await runWithRetry([
+          "speech", "synthesize",
+          "--text", body,
+          "--voice", "longwan_v3",
+          "--language", "zh",
+          "--out", path.join(targetDir, voiceFile)
+        ]);
+
+        const voiceUrl = isDemo
+          ? `http://localhost:3001/assets/minimalist-vase/${voiceFile}`
+          : `http://localhost:3001/assets/generated/${curationId}/${voiceFile}`;
+
+        data.history.editorial[activeIdx].voicePath = voiceUrl;
+      } else {
+        // 兜底直接修改
+        if (!data.editorial) data.editorial = {};
+        data.editorial.headline = headline;
+        data.editorial.body = body;
+      }
+    }
+
+    fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2));
+    res.json(data);
+  } catch (err) {
+    console.error("Edit text failed:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 历史记录查询接口
 app.get("/api/curate/history", (req, res) => {
   const genDir = path.join(__dirname, "public", "assets", "generated");
